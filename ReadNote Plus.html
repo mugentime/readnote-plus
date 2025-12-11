@@ -438,37 +438,26 @@
             column-width: auto;
         }
 
-        /* CSS columns-based page flow for smooth text pagination */
-        .page-flow-container {
-            transition: transform 0.3s ease;
+        /* Page text content styling */
+        .page-text-content {
+            height: 100%;
+            overflow: hidden;
         }
 
-        .page-flow-container p {
+        .page-text-content p {
             margin: 0 0 1em 0;
-            orphans: 2;
-            widows: 2;
+            text-indent: 1.5em;
         }
 
-        .page-flow-container h1,
-        .page-flow-container h2,
-        .page-flow-container h3 {
-            break-after: avoid;
-            page-break-after: avoid;
+        .page-text-content p:first-child {
+            text-indent: 0;
         }
 
-        .page-flow-container img {
+        .page-text-content img {
             max-width: 100%;
             height: auto;
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-
-        .page-flow-container .chapter {
-            break-before: column;
-        }
-
-        .page-flow-container .chapter:first-child {
-            break-before: auto;
+            display: block;
+            margin: 1em auto;
         }
 
         .page-content h1, .page-content h2, .page-content h3 {
@@ -531,6 +520,132 @@
             border-left: 3px solid var(--color-accent);
             font-style: italic;
             color: var(--color-text-secondary);
+        }
+
+        /* Library Grid View */
+        .library-grid {
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            overflow-y: auto;
+            background: var(--color-bg);
+        }
+
+        .library-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .library-title {
+            font-family: 'Literata', Georgia, serif;
+            font-size: 2em;
+            color: var(--color-wood-dark);
+            margin: 0 0 8px 0;
+        }
+
+        .library-subtitle {
+            color: var(--color-text-secondary);
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .book-card {
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .book-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .book-cover-large {
+            width: 100%;
+            aspect-ratio: 2/3;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+            background: linear-gradient(135deg, var(--color-wood-light) 0%, var(--color-wood-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: var(--color-cream);
+            position: relative;
+        }
+
+        .book-cover-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .book-card-info {
+            padding: 12px 4px;
+            text-align: center;
+        }
+
+        .book-card-title {
+            font-family: 'Literata', Georgia, serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--color-text);
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .book-card-author {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .book-card-progress {
+            margin-top: 8px;
+            height: 4px;
+            background: var(--color-border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .book-card-progress-fill {
+            height: 100%;
+            background: var(--color-accent);
+            border-radius: 2px;
+        }
+
+        .empty-library {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-library .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-library .empty-text {
+            font-size: 18px;
+            color: var(--color-text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .empty-library .upload-btn {
+            display: inline-block;
+            width: auto;
+            padding: 14px 32px;
         }
 
         /* Page Navigation Zones */
@@ -1189,6 +1304,7 @@
             <!-- Reader Header -->
             <header class="reader-header" id="readerHeader" style="display: none;">
                 <div class="book-info">
+                    <button class="btn-icon" onclick="showLibrary()" title="Back to Library" style="margin-right: 12px; font-size: 18px;">←</button>
                     <div>
                         <div class="book-title" id="bookTitle">Book Title</div>
                         <div class="book-author" id="bookAuthor">Author</div>
@@ -1212,9 +1328,21 @@
             <div class="reading-area">
                 <div class="reader-panel" id="readerPanel">
                     <div class="page-container" id="pageContainer">
-                        <div class="empty-state" id="emptyState">
-                            <div class="empty-icon">📖</div>
-                            <div class="empty-text">Select a book from your library or add a new one to start reading</div>
+                        <!-- Library Grid View -->
+                        <div class="library-grid" id="libraryGrid">
+                            <div class="library-header">
+                                <h2 class="library-title">📚 Your Library</h2>
+                                <p class="library-subtitle">Select a book to start reading</p>
+                            </div>
+                            <div class="book-grid" id="bookGrid">
+                                <div class="empty-library" id="emptyLibrary">
+                                    <div class="empty-icon">📖</div>
+                                    <div class="empty-text">Your library is empty</div>
+                                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                        + Add Your First Book
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="page-view" id="pageView" style="display: none;">
                             <div class="page-content" id="pageContent"></div>
@@ -1832,6 +1960,7 @@
 
         // Render file list
         function renderFileList() {
+            // Render sidebar file list
             const container = document.getElementById('fileList');
             container.innerHTML = state.files.map((file, i) => {
                 const progress = state.readingProgress[file.name] || 0;
@@ -1867,6 +1996,63 @@
                     </div>
                 `;
             }).join('');
+
+            // Render library grid view
+            renderLibraryGrid();
+        }
+
+        function renderLibraryGrid() {
+            const bookGrid = document.getElementById('bookGrid');
+            const emptyLibrary = document.getElementById('emptyLibrary');
+
+            if (state.files.length === 0) {
+                bookGrid.innerHTML = `
+                    <div class="empty-library">
+                        <div class="empty-icon">📖</div>
+                        <div class="empty-text">Your library is empty</div>
+                        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                            + Add Your First Book
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            bookGrid.innerHTML = state.files.map((file, i) => {
+                const progress = state.readingProgress[file.name] || 0;
+                const cover = file.metadata?.cover;
+                const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+                const author = file.metadata?.author;
+                const typeIcon = file.type === 'PDF' ? '📄' : file.type === 'EPUB' ? '📚' : '📝';
+
+                return `
+                    <div class="book-card" onclick="selectFile(${i})">
+                        <div class="book-cover-large">
+                            ${cover
+                                ? `<img src="${cover}" alt="Cover">`
+                                : typeIcon
+                            }
+                        </div>
+                        <div class="book-card-info">
+                            <div class="book-card-title">${escapeHtml(title)}</div>
+                            ${author && author !== 'Unknown' ? `<div class="book-card-author">${escapeHtml(author)}</div>` : ''}
+                            ${progress > 0 ? `
+                                <div class="book-card-progress">
+                                    <div class="book-card-progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showLibrary() {
+            state.currentFileIndex = -1;
+            document.getElementById('readerHeader').style.display = 'none';
+            document.getElementById('libraryGrid').style.display = 'block';
+            document.getElementById('pageView').style.display = 'none';
+            renderFileList();
         }
 
         // Select and display file
@@ -1875,7 +2061,7 @@
             const file = state.files[index];
 
             document.getElementById('readerHeader').style.display = 'flex';
-            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('libraryGrid').style.display = 'none';
             document.getElementById('pageView').style.display = 'flex';
 
             document.getElementById('bookTitle').textContent = file.metadata?.title || file.name;
@@ -1972,42 +2158,80 @@
 
         async function paginateContent(html) {
             const container = document.getElementById('pageContent');
+            const pageHeight = container.clientHeight - (state.settings.margin * 2);
+            const pageWidth = container.clientWidth - (state.settings.margin * 2);
 
-            // Use CSS columns for proper text flow pagination
-            // This allows text to flow naturally across pages without cutting content
-            const pageWidth = container.clientWidth;
-            const pageHeight = container.clientHeight;
-            const margin = state.settings.margin;
-            const contentWidth = pageWidth - (margin * 2);
-            const contentHeight = pageHeight - (margin * 2);
-
-            // Create wrapper with CSS columns
-            const wrapper = document.createElement('div');
-            wrapper.className = 'page-flow-container';
-            wrapper.style.cssText = `
-                height: ${contentHeight}px;
-                column-width: ${contentWidth}px;
-                column-gap: ${margin * 2}px;
-                column-fill: auto;
-                overflow: hidden;
+            // Create a measuring container
+            const measureDiv = document.createElement('div');
+            measureDiv.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                width: ${pageWidth}px;
+                font-family: 'Literata', Georgia, serif;
+                font-size: ${state.settings.fontSize}px;
+                line-height: ${state.settings.lineHeight};
+                text-align: justify;
             `;
-            wrapper.innerHTML = html;
+            measureDiv.innerHTML = html;
+            document.body.appendChild(measureDiv);
 
-            container.innerHTML = '';
-            container.appendChild(wrapper);
+            // Wait for layout
+            await new Promise(r => requestAnimationFrame(r));
 
-            // Wait for layout to complete
-            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            // Split content into pages based on actual rendered height
+            state.pages = [];
+            const allElements = Array.from(measureDiv.querySelectorAll('p, h1, h2, h3, h4, section, div, blockquote, img'));
 
-            // Calculate total pages based on scroll width
-            const totalWidth = wrapper.scrollWidth;
-            const columnWidth = contentWidth + (margin * 2);
-            state.totalPages = Math.max(1, Math.ceil(totalWidth / columnWidth));
+            // If no block elements found, wrap content in paragraphs
+            if (allElements.length === 0) {
+                const textContent = measureDiv.textContent || measureDiv.innerText;
+                const paragraphs = textContent.split(/\n\n+/).filter(p => p.trim());
+                measureDiv.innerHTML = paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+                await new Promise(r => requestAnimationFrame(r));
+                allElements.push(...measureDiv.querySelectorAll('p'));
+            }
+
+            let currentPageHtml = '';
+            let currentHeight = 0;
+
+            // Create a test container for accurate height measurement
+            const testDiv = document.createElement('div');
+            testDiv.style.cssText = measureDiv.style.cssText;
+            document.body.appendChild(testDiv);
+
+            for (const el of allElements) {
+                // Clone element for measurement
+                testDiv.innerHTML = currentPageHtml + el.outerHTML;
+                await new Promise(r => requestAnimationFrame(r));
+
+                const testHeight = testDiv.scrollHeight;
+
+                if (testHeight > pageHeight && currentPageHtml) {
+                    // Current element would overflow, save current page
+                    state.pages.push(currentPageHtml);
+                    currentPageHtml = el.outerHTML;
+                } else {
+                    currentPageHtml += el.outerHTML;
+                }
+            }
+
+            // Add remaining content as last page
+            if (currentPageHtml.trim()) {
+                state.pages.push(currentPageHtml);
+            }
+
+            // Cleanup
+            document.body.removeChild(measureDiv);
+            document.body.removeChild(testDiv);
+
+            // Ensure at least one page
+            if (state.pages.length === 0) {
+                state.pages.push(html);
+            }
+
+            state.totalPages = state.pages.length;
             state.currentPage = 1;
-            state.columnWidth = columnWidth;
-
-            // Store wrapper reference for page navigation
-            state.pageWrapper = wrapper;
+            state.pageWrapper = null;
 
             displayPage(1);
         }
@@ -2017,10 +2241,8 @@
 
             if (state.pdfDoc) {
                 renderPdfPage(pageNum);
-            } else if (state.pageWrapper) {
-                // Use CSS transform for smooth page transitions
-                const offset = (pageNum - 1) * state.columnWidth;
-                state.pageWrapper.style.transform = `translateX(-${offset}px)`;
+            } else if (state.pages && state.pages[pageNum - 1] !== undefined) {
+                container.innerHTML = `<div class="page-text-content">${state.pages[pageNum - 1]}</div>`;
             }
 
             state.currentPage = pageNum;
@@ -2808,10 +3030,7 @@ img { max-width: 100%; page-break-inside: avoid; }`
         function deleteFile(index) {
             state.files.splice(index, 1);
             if (state.currentFileIndex === index) {
-                state.currentFileIndex = -1;
-                document.getElementById('readerHeader').style.display = 'none';
-                document.getElementById('emptyState').style.display = 'flex';
-                document.getElementById('pageView').style.display = 'none';
+                showLibrary();
             } else if (state.currentFileIndex > index) {
                 state.currentFileIndex--;
             }
