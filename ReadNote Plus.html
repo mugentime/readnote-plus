@@ -131,7 +131,9 @@
         }
 
         .file-item {
-            padding: 14px;
+            display: flex;
+            gap: 12px;
+            padding: 12px;
             margin-bottom: 10px;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(212, 165, 116, 0.2);
@@ -150,12 +152,53 @@
             border-color: var(--color-ember);
         }
 
+        .file-cover {
+            width: 50px;
+            height: 70px;
+            border-radius: 4px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--color-wood-light) 0%, var(--color-wood-dark) 100%);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--color-cream);
+            overflow: hidden;
+        }
+
+        .file-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
         .file-name {
             color: var(--color-cream);
             font-weight: 500;
-            font-size: 14px;
-            margin-bottom: 6px;
+            font-size: 13px;
+            margin-bottom: 4px;
             word-break: break-word;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .file-author {
+            font-size: 11px;
+            color: var(--color-amber);
+            opacity: 0.8;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .file-meta {
@@ -165,23 +208,23 @@
         }
 
         .file-size {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--color-amber);
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .file-type {
-            font-size: 9px;
-            padding: 3px 8px;
+            font-size: 8px;
+            padding: 2px 6px;
             background: var(--color-ember);
             color: white;
-            border-radius: 4px;
+            border-radius: 3px;
             font-weight: 600;
         }
 
         .file-progress {
-            margin-top: 8px;
-            font-size: 11px;
+            margin-top: 6px;
+            font-size: 10px;
             color: var(--color-amber);
         }
 
@@ -1460,7 +1503,8 @@
                 publisher: opfDoc.querySelector('metadata publisher, dc\\:publisher')?.textContent || '',
                 language: opfDoc.querySelector('metadata language, dc\\:language')?.textContent || 'en',
                 description: opfDoc.querySelector('metadata description, dc\\:description')?.textContent || '',
-                date: opfDoc.querySelector('metadata date, dc\\:date')?.textContent || ''
+                date: opfDoc.querySelector('metadata date, dc\\:date')?.textContent || '',
+                cover: null
             };
 
             // Build manifest map
@@ -1484,13 +1528,39 @@
                 }
             }
 
-            // Extract images
+            // Extract images and find cover
             const images = {};
+
+            // Find cover image - multiple methods
+            // Method 1: Look for meta cover element
+            const coverMeta = opfDoc.querySelector('metadata meta[name="cover"]');
+            const coverId = coverMeta?.getAttribute('content');
+
+            // Method 2: Look for item with cover-image property
+            const coverItem = opfDoc.querySelector('manifest item[properties*="cover-image"]');
+
+            // Method 3: Look for item with id containing 'cover'
+            const coverById = Object.entries(manifestMap).find(([id, item]) =>
+                id.toLowerCase().includes('cover') && item.mediaType?.startsWith('image/')
+            );
+
             for (const [id, item] of Object.entries(manifestMap)) {
                 if (item.mediaType?.startsWith('image/')) {
                     const imgData = await zip.file(opfDir + item.href)?.async('base64');
                     if (imgData) {
-                        images[item.href] = `data:${item.mediaType};base64,${imgData}`;
+                        const dataUrl = `data:${item.mediaType};base64,${imgData}`;
+                        images[item.href] = dataUrl;
+
+                        // Check if this is the cover
+                        if ((coverId && id === coverId) ||
+                            (coverItem && item.href === coverItem.getAttribute('href')) ||
+                            (coverById && id === coverById[0]) ||
+                            (!metadata.cover && (
+                                item.href.toLowerCase().includes('cover') ||
+                                id.toLowerCase() === 'cover'
+                            ))) {
+                            metadata.cover = dataUrl;
+                        }
                     }
                 }
             }
@@ -1588,22 +1658,35 @@
             const container = document.getElementById('fileList');
             container.innerHTML = state.files.map((file, i) => {
                 const progress = state.readingProgress[file.name] || 0;
+                const cover = file.metadata?.cover;
+                const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+                const author = file.metadata?.author;
+                const typeIcon = file.type === 'PDF' ? '📄' : file.type === 'EPUB' ? '📚' : '📝';
+
                 return `
                     <div class="file-item ${state.currentFileIndex === i ? 'active' : ''}" onclick="selectFile(${i})">
-                        <div class="file-name">${escapeHtml(file.name)}</div>
-                        <div class="file-meta">
-                            <span class="file-size">${formatSize(file.size)}</span>
-                            <span class="file-type">${file.type}</span>
+                        <div class="file-cover">
+                            ${cover
+                                ? `<img src="${cover}" alt="Cover">`
+                                : typeIcon
+                            }
                         </div>
-                        ${progress > 0 ? `
-                            <div class="file-progress">
-                                ${Math.round(progress)}% read
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${progress}%"></div>
-                                </div>
+                        <div class="file-info">
+                            <div class="file-name">${escapeHtml(title)}</div>
+                            ${author && author !== 'Unknown' ? `<div class="file-author">${escapeHtml(author)}</div>` : ''}
+                            <div class="file-meta">
+                                <span class="file-size">${formatSize(file.size)}</span>
+                                <span class="file-type">${file.type}</span>
                             </div>
-                        ` : ''}
-                        <button class="delete-file" onclick="event.stopPropagation(); deleteFile(${i})">Remove</button>
+                            ${progress > 0 ? `
+                                <div class="file-progress">
+                                    ${Math.round(progress)}% read
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${progress}%"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -2170,12 +2253,54 @@
                 const chapters = file.chapters || [{ title: 'Content', content: file.content }];
                 const notes = includeNotes ? (state.notes[file.name] || []) : [];
 
+                // Get original cover if available
+                const originalCover = file.metadata?.cover;
+                let coverManifest = '';
+                let coverMeta = '';
+
+                if (originalCover) {
+                    // Extract image type from data URL
+                    const coverMatch = originalCover.match(/^data:image\/(jpeg|png|gif|webp);base64,(.+)$/);
+                    if (coverMatch) {
+                        const coverType = coverMatch[1] === 'jpeg' ? 'jpg' : coverMatch[1];
+                        const coverData = coverMatch[2];
+                        const coverMime = `image/${coverMatch[1]}`;
+
+                        // Add cover image to EPUB
+                        zip.file(`OEBPS/images/cover.${coverType}`, coverData, { base64: true });
+
+                        coverManifest = `
+    <item id="cover-image" href="images/cover.${coverType}" media-type="${coverMime}" properties="cover-image"/>
+    <item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>`;
+                        coverMeta = `
+    <meta name="cover" content="cover-image"/>`;
+
+                        // Create cover page
+                        zip.file('OEBPS/cover.xhtml', `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="${language}">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cover</title>
+  <style>
+    body { margin: 0; padding: 0; text-align: center; }
+    img { max-width: 100%; max-height: 100vh; }
+  </style>
+</head>
+<body>
+  <img src="images/cover.${coverType}" alt="Cover"/>
+</body>
+</html>`);
+                    }
+                }
+
                 // Generate manifest and spine
                 let manifestItems = `
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
-    <item id="css" href="styles.css" media-type="text/css"/>`;
+    <item id="css" href="styles.css" media-type="text/css"/>${coverManifest}`;
 
-                let spineItems = '';
+                let spineItems = originalCover ? `
+    <itemref idref="cover"/>` : '';
 
                 chapters.forEach((ch, i) => {
                     manifestItems += `
@@ -2427,10 +2552,57 @@ img { max-width: 100%; page-break-inside: avoid; }`
                 a.href = url;
                 a.download = `${title}.epub`;
                 a.click();
+
+                // Add exported EPUB to library automatically
+                const arrayBuffer = await blob.arrayBuffer();
+                const exportedFile = {
+                    name: `${title}.epub`,
+                    type: 'EPUB',
+                    size: blob.size,
+                    rawData: arrayBuffer,
+                    content: null,
+                    chapters: chapters,
+                    metadata: {
+                        title: title,
+                        author: author,
+                        language: language,
+                        cover: file.metadata?.cover || null // Preserve original cover
+                    }
+                };
+
+                // Parse the exported EPUB to get full content
+                try {
+                    const parsedEpub = await parseEpub(arrayBuffer);
+                    exportedFile.content = parsedEpub.content;
+                    exportedFile.chapters = parsedEpub.chapters;
+                    // Keep the original cover if the new one wasn't found
+                    if (!parsedEpub.metadata.cover && file.metadata?.cover) {
+                        exportedFile.metadata.cover = file.metadata.cover;
+                    } else if (parsedEpub.metadata.cover) {
+                        exportedFile.metadata.cover = parsedEpub.metadata.cover;
+                    }
+                } catch (e) {
+                    console.log('Could not parse exported EPUB, using original data');
+                    exportedFile.content = file.content;
+                }
+
+                // Check if already in library (by name)
+                const existingIndex = state.files.findIndex(f => f.name === exportedFile.name);
+                if (existingIndex >= 0) {
+                    state.files[existingIndex] = exportedFile;
+                } else {
+                    state.files.push(exportedFile);
+                }
+
+                if (!state.notes[exportedFile.name]) {
+                    state.notes[exportedFile.name] = notes;
+                }
+
+                renderFileList();
                 URL.revokeObjectURL(url);
 
                 closeExportModal();
-                showToast('EPUB exported successfully!', 'success');
+                showToast('EPUB exported and added to library!', 'success');
 
             } catch (err) {
                 console.error('Export error:', err);
