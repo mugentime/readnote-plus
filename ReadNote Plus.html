@@ -420,15 +420,55 @@
             font-size: var(--font-size);
             line-height: var(--line-height);
             color: var(--color-text);
-            column-count: 1;
-            column-gap: 40px;
             text-align: justify;
             hyphens: auto;
             -webkit-hyphens: auto;
         }
 
-        .page-content.two-columns {
+        /* CSS columns-based pagination for smooth text flow */
+        .page-content-wrapper {
+            column-width: 100vw;
+            column-gap: 80px;
+            column-fill: auto;
+            height: 100%;
+        }
+
+        .page-content.two-columns .page-content-wrapper {
             column-count: 2;
+            column-width: auto;
+        }
+
+        /* CSS columns-based page flow for smooth text pagination */
+        .page-flow-container {
+            transition: transform 0.3s ease;
+        }
+
+        .page-flow-container p {
+            margin: 0 0 1em 0;
+            orphans: 2;
+            widows: 2;
+        }
+
+        .page-flow-container h1,
+        .page-flow-container h2,
+        .page-flow-container h3 {
+            break-after: avoid;
+            page-break-after: avoid;
+        }
+
+        .page-flow-container img {
+            max-width: 100%;
+            height: auto;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .page-flow-container .chapter {
+            break-before: column;
+        }
+
+        .page-flow-container .chapter:first-child {
+            break-before: auto;
         }
 
         .page-content h1, .page-content h2, .page-content h3 {
@@ -1363,6 +1403,8 @@
             chapters: [],
             currentChapter: 0,
             pages: [],
+            pageWrapper: null,
+            columnWidth: 0,
             settings: {
                 fontSize: 18,
                 lineHeight: 1.8,
@@ -1436,7 +1478,13 @@
                     fileData.chapters = parseTextChapters(fileData.content);
                 } else if (file.name.endsWith('.pdf')) {
                     fileData.rawData = await readAsArrayBuffer(file);
-                    fileData.content = 'PDF';
+                    // Extract text from PDF for EPUB export
+                    showToast('Extracting text from PDF (this may take a moment)...');
+                    const pdfExtract = await extractPdfText(fileData.rawData);
+                    fileData.content = pdfExtract.content;
+                    fileData.chapters = pdfExtract.chapters;
+                    fileData.metadata.title = file.name.replace(/\.pdf$/i, '');
+                    showToast(`Extracted ${pdfExtract.chapters.length} sections from PDF`, 'success');
                 } else if (file.name.endsWith('.epub')) {
                     fileData.rawData = await readAsArrayBuffer(file);
                     const epub = await parseEpub(fileData.rawData);
@@ -1475,6 +1523,135 @@
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
+        }
+
+        // Extract text from PDF for EPUB export
+        async function extractPdfText(arrayBuffer) {
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const numPages = pdf.numPages;
+            const chapters = [];
+            let fullContent = '';
+            let currentChapter = { title: 'Chapter 1', content: '', pageStart: 1 };
+            let chapterNum = 1;
+
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+
+                let pageText = '';
+                let lastY = null;
+                let lastFontSize = 0;
+
+                // Extract text with layout awareness
+                for (const item of textContent.items) {
+                    if (item.str.trim() === '') continue;
+
+                    // Add newlines for significant Y position changes (new lines)
+                    if (lastY !== null && Math.abs(item.transform[5] - lastY) > 8) {
+                        pageText += '\n';
+                    }
+
+                    // Detect potential chapter headings (larger font at start of section)
+                    const fontSize = Math.abs(item.transform[0]);
+                    if (fontSize > lastFontSize * 1.3 && fontSize > 14 &&
+                        pageText.endsWith('\n') && item.str.trim().length > 0 &&
+                        item.str.trim().length < 100) {
+                        // Potential chapter heading detected
+                        const headingText = item.str.trim();
+
+                        // Check if it looks like a chapter heading
+                        if (/^(chapter|part|section|\d+[.\s]|[ivxlcdm]+[.\s])/i.test(headingText) ||
+                            (headingText.length < 60 && !headingText.includes('.'))) {
+
+                            // Save current chapter if it has content
+                            if (currentChapter.content.trim().length > 100) {
+                                chapters.push({
+                                    title: currentChapter.title,
+                                    content: formatPdfContent(currentChapter.content)
+                                });
+                            }
+
+                            chapterNum++;
+                            currentChapter = {
+                                title: headingText || `Chapter ${chapterNum}`,
+                                content: '',
+                                pageStart: pageNum
+                            };
+                        }
+                    }
+
+                    pageText += item.str;
+                    lastY = item.transform[5];
+                    lastFontSize = fontSize;
+                }
+
+                currentChapter.content += pageText + '\n\n';
+                fullContent += pageText + '\n\n';
+
+                // Add page marker for reference
+                if (pageNum < numPages) {
+                    currentChapter.content += `<!-- page ${pageNum} -->\n`;
+                }
+            }
+
+            // Add final chapter
+            if (currentChapter.content.trim().length > 0) {
+                chapters.push({
+                    title: currentChapter.title,
+                    content: formatPdfContent(currentChapter.content)
+                });
+            }
+
+            // If no chapters detected, split by page groups
+            if (chapters.length <= 1 && numPages > 10) {
+                const pagesPerChapter = Math.ceil(numPages / Math.min(10, Math.ceil(numPages / 20)));
+                const rechaptered = [];
+                let chapterContent = '';
+                let chNum = 1;
+
+                for (let i = 0; i < chapters.length; i++) {
+                    const ch = chapters[i];
+                    chapterContent += ch.content;
+                }
+
+                // Split by approximate page markers
+                const pageMarkers = chapterContent.split(/<!-- page \d+ -->/);
+                let tempContent = '';
+
+                for (let i = 0; i < pageMarkers.length; i++) {
+                    tempContent += pageMarkers[i];
+
+                    if ((i + 1) % pagesPerChapter === 0 || i === pageMarkers.length - 1) {
+                        if (tempContent.trim()) {
+                            rechaptered.push({
+                                title: `Section ${chNum}`,
+                                content: formatPdfContent(tempContent)
+                            });
+                            chNum++;
+                            tempContent = '';
+                        }
+                    }
+                }
+
+                if (rechaptered.length > 1) {
+                    return { content: fullContent, chapters: rechaptered };
+                }
+            }
+
+            return { content: fullContent, chapters };
+        }
+
+        function formatPdfContent(text) {
+            // Clean up PDF text extraction artifacts
+            return text
+                .replace(/<!-- page \d+ -->/g, '') // Remove page markers
+                .replace(/\n{3,}/g, '\n\n')        // Normalize multiple newlines
+                .replace(/([a-z])-\n([a-z])/gi, '$1$2') // Fix hyphenated words
+                .replace(/([.!?])\n([A-Z])/g, '$1\n\n$2') // Paragraph breaks after sentences
+                .split('\n\n')
+                .filter(p => p.trim().length > 0)
+                .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, ' ')}</p>`)
+                .join('\n');
         }
 
         // EPUB Parser - Enhanced
@@ -1795,52 +1972,42 @@
 
         async function paginateContent(html) {
             const container = document.getElementById('pageContent');
+
+            // Use CSS columns for proper text flow pagination
+            // This allows text to flow naturally across pages without cutting content
+            const pageWidth = container.clientWidth;
             const pageHeight = container.clientHeight;
+            const margin = state.settings.margin;
+            const contentWidth = pageWidth - (margin * 2);
+            const contentHeight = pageHeight - (margin * 2);
 
-            // Create temporary container for measurement
-            const temp = document.createElement('div');
-            temp.style.cssText = `
-                position: absolute;
-                visibility: hidden;
-                width: ${container.clientWidth}px;
-                font-family: ${getComputedStyle(container).fontFamily};
-                font-size: ${state.settings.fontSize}px;
-                line-height: ${state.settings.lineHeight};
-                padding: ${state.settings.margin}px;
+            // Create wrapper with CSS columns
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-flow-container';
+            wrapper.style.cssText = `
+                height: ${contentHeight}px;
+                column-width: ${contentWidth}px;
+                column-gap: ${margin * 2}px;
+                column-fill: auto;
+                overflow: hidden;
             `;
-            temp.innerHTML = html;
-            document.body.appendChild(temp);
+            wrapper.innerHTML = html;
 
-            // Split into pages
-            state.pages = [];
-            let currentPageContent = '';
-            let currentHeight = 0;
+            container.innerHTML = '';
+            container.appendChild(wrapper);
 
-            const elements = Array.from(temp.children);
+            // Wait for layout to complete
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-            for (const el of elements) {
-                const elHeight = el.offsetHeight + parseInt(getComputedStyle(el).marginBottom || 0);
-
-                if (currentHeight + elHeight > pageHeight - (state.settings.margin * 2)) {
-                    if (currentPageContent) {
-                        state.pages.push(currentPageContent);
-                    }
-                    currentPageContent = el.outerHTML;
-                    currentHeight = elHeight;
-                } else {
-                    currentPageContent += el.outerHTML;
-                    currentHeight += elHeight;
-                }
-            }
-
-            if (currentPageContent) {
-                state.pages.push(currentPageContent);
-            }
-
-            document.body.removeChild(temp);
-
-            state.totalPages = state.pages.length || 1;
+            // Calculate total pages based on scroll width
+            const totalWidth = wrapper.scrollWidth;
+            const columnWidth = contentWidth + (margin * 2);
+            state.totalPages = Math.max(1, Math.ceil(totalWidth / columnWidth));
             state.currentPage = 1;
+            state.columnWidth = columnWidth;
+
+            // Store wrapper reference for page navigation
+            state.pageWrapper = wrapper;
 
             displayPage(1);
         }
@@ -1850,8 +2017,10 @@
 
             if (state.pdfDoc) {
                 renderPdfPage(pageNum);
-            } else if (state.pages[pageNum - 1]) {
-                container.innerHTML = state.pages[pageNum - 1];
+            } else if (state.pageWrapper) {
+                // Use CSS transform for smooth page transitions
+                const offset = (pageNum - 1) * state.columnWidth;
+                state.pageWrapper.style.transform = `translateX(-${offset}px)`;
             }
 
             state.currentPage = pageNum;
