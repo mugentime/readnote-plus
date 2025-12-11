@@ -1,0 +1,2136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadNote Plus - Your Cozy Reading Corner</title>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- EPUB.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Google Fonts - Cozy typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Cozy Woody Color Palette */
+            --color-dark-wood: #3D2314;
+            --color-medium-wood: #5C3D2E;
+            --color-light-wood: #8B5A2B;
+            --color-warm-cream: #F5E6D3;
+            --color-parchment: #FDF8F0;
+            --color-amber: #D4A574;
+            --color-ember: #C65D3B;
+            --color-ember-glow: #E8854A;
+            --color-forest: #2D5016;
+            --color-sage: #7A8B6E;
+            --color-charcoal: #2C2416;
+            --color-smoke: rgba(44, 36, 22, 0.6);
+
+            /* Semantic colors */
+            --color-primary: var(--color-ember);
+            --color-primary-hover: var(--color-ember-glow);
+            --color-bg: var(--color-parchment);
+            --color-surface: var(--color-warm-cream);
+            --color-text: var(--color-dark-wood);
+            --color-text-secondary: var(--color-medium-wood);
+            --color-border: rgba(93, 61, 46, 0.25);
+            --color-error: #8B3A3A;
+            --color-success: var(--color-forest);
+
+            /* Wood grain texture */
+            --wood-pattern: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(139, 90, 43, 0.03) 2px,
+                rgba(139, 90, 43, 0.03) 4px
+            );
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--color-bg);
+            background-image:
+                radial-gradient(ellipse at bottom, rgba(232, 133, 74, 0.08) 0%, transparent 60%),
+                var(--wood-pattern);
+            color: var(--color-text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Ambient fireplace glow effect */
+        body::before {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            height: 200px;
+            background: radial-gradient(ellipse at center bottom,
+                rgba(232, 133, 74, 0.15) 0%,
+                rgba(198, 93, 59, 0.08) 30%,
+                transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            animation: fireGlow 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes fireGlow {
+            0% { opacity: 0.6; }
+            50% { opacity: 0.9; }
+            100% { opacity: 0.7; }
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Sidebar - Like a wooden bookshelf */
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(180deg,
+                var(--color-medium-wood) 0%,
+                var(--color-dark-wood) 100%);
+            background-image:
+                var(--wood-pattern),
+                linear-gradient(180deg, var(--color-medium-wood) 0%, var(--color-dark-wood) 100%);
+            border-right: 4px solid var(--color-light-wood);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow:
+                inset -10px 0 20px rgba(0,0,0,0.2),
+                4px 0 15px rgba(0,0,0,0.15);
+        }
+
+        .app-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--color-warm-cream);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-title::before {
+            content: '🏠';
+            font-size: 28px;
+        }
+
+        .app-subtitle {
+            font-size: 12px;
+            color: var(--color-amber);
+            margin-bottom: 28px;
+            font-style: italic;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            margin-bottom: 24px;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, var(--color-ember) 0%, var(--color-ember-glow) 100%);
+            color: var(--color-warm-cream);
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 300ms ease;
+            box-shadow:
+                0 4px 12px rgba(198, 93, 59, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .upload-btn::before {
+            content: '📚';
+            font-size: 18px;
+        }
+
+        .upload-btn:hover {
+            background: linear-gradient(135deg, var(--color-ember-glow) 0%, var(--color-ember) 100%);
+            transform: translateY(-2px);
+            box-shadow:
+                0 6px 20px rgba(198, 93, 59, 0.5),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--color-amber);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+        }
+
+        .file-list {
+            flex: 1;
+            margin-bottom: 16px;
+        }
+
+        .file-item {
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,
+                rgba(245, 230, 211, 0.12) 0%,
+                rgba(245, 230, 211, 0.06) 100%);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 250ms ease;
+            word-break: break-word;
+            font-size: 13px;
+            backdrop-filter: blur(4px);
+        }
+
+        .file-item:hover {
+            background: linear-gradient(135deg,
+                rgba(245, 230, 211, 0.2) 0%,
+                rgba(245, 230, 211, 0.1) 100%);
+            border-color: var(--color-amber);
+            transform: translateX(4px);
+        }
+
+        .file-item.active {
+            background: linear-gradient(135deg,
+                rgba(212, 165, 116, 0.25) 0%,
+                rgba(212, 165, 116, 0.15) 100%);
+            border-color: var(--color-ember);
+            box-shadow: 0 2px 8px rgba(198, 93, 59, 0.2);
+        }
+
+        .file-item .file-name {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--color-warm-cream);
+            font-weight: 500;
+        }
+
+        .file-item .file-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item .file-size {
+            font-size: 11px;
+            color: var(--color-amber);
+            opacity: 0.8;
+        }
+
+        .file-item .file-type {
+            font-size: 9px;
+            padding: 3px 8px;
+            background: var(--color-ember);
+            color: var(--color-warm-cream);
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .delete-file {
+            background: none;
+            border: none;
+            color: var(--color-ember-glow);
+            cursor: pointer;
+            font-size: 11px;
+            margin-top: 6px;
+            opacity: 0.7;
+            transition: opacity 200ms;
+        }
+
+        .delete-file:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        /* Main content area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--color-bg);
+        }
+
+        .reader-container {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        /* Reader Panel - Like an open book */
+        .reader-panel {
+            flex: 2;
+            background: var(--color-parchment);
+            border-radius: 16px;
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow:
+                0 8px 32px rgba(61, 35, 20, 0.12),
+                0 2px 8px rgba(61, 35, 20, 0.08),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        .reader-header {
+            padding: 16px 20px;
+            background: linear-gradient(180deg,
+                var(--color-warm-cream) 0%,
+                rgba(245, 230, 211, 0.5) 100%);
+            border-bottom: 2px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .reader-header-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-weight: 600;
+            color: var(--color-dark-wood);
+            font-size: 16px;
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .reader-header-title::before {
+            content: '📖';
+            font-size: 20px;
+        }
+
+        .reader-header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .page-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(139, 90, 43, 0.1);
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+
+        .page-controls span {
+            font-size: 12px;
+            color: var(--color-medium-wood);
+            min-width: 70px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 12px;
+            background: linear-gradient(135deg, var(--color-light-wood) 0%, var(--color-medium-wood) 100%);
+            color: var(--color-warm-cream);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 200ms ease;
+            font-weight: 500;
+            box-shadow: 0 2px 6px rgba(61, 35, 20, 0.2);
+        }
+
+        .btn-small:hover {
+            background: linear-gradient(135deg, var(--color-medium-wood) 0%, var(--color-dark-wood) 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-small:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reader-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 40px;
+            font-size: 16px;
+            line-height: 1.9;
+            position: relative;
+            background:
+                linear-gradient(to right, rgba(139, 90, 43, 0.03) 0%, transparent 5%, transparent 95%, rgba(139, 90, 43, 0.03) 100%),
+                var(--color-parchment);
+        }
+
+        .reader-content::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .reader-content::-webkit-scrollbar-track {
+            background: rgba(139, 90, 43, 0.05);
+            border-radius: 6px;
+        }
+
+        .reader-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--color-amber) 0%, var(--color-light-wood) 100%);
+            border-radius: 6px;
+            border: 2px solid var(--color-parchment);
+        }
+
+        .reader-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--color-light-wood) 0%, var(--color-medium-wood) 100%);
+        }
+
+        /* PDF Canvas Container */
+        .pdf-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .pdf-page {
+            box-shadow:
+                0 4px 20px rgba(61, 35, 20, 0.15),
+                0 1px 4px rgba(61, 35, 20, 0.1);
+            background: white;
+            border-radius: 4px;
+        }
+
+        /* EPUB Content Styling */
+        .epub-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+        }
+
+        .epub-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(61, 35, 20, 0.15);
+        }
+
+        .epub-content h1, .epub-content h2, .epub-content h3 {
+            color: var(--color-dark-wood);
+            margin-top: 1.8em;
+            font-weight: 600;
+        }
+
+        .epub-content p {
+            text-align: justify;
+            margin-bottom: 1.2em;
+            color: var(--color-charcoal);
+        }
+
+        /* Text content styling */
+        .text-content {
+            white-space: pre-wrap;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 17px;
+            max-width: 720px;
+            margin: 0 auto;
+            color: var(--color-charcoal);
+        }
+
+        .highlighted {
+            background: linear-gradient(135deg, rgba(232, 133, 74, 0.3) 0%, rgba(212, 165, 116, 0.4) 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Notes panel - Like a leather journal */
+        .notes-panel {
+            flex: 1;
+            background: linear-gradient(180deg,
+                #4A3728 0%,
+                #3A2A1F 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-width: 320px;
+            box-shadow:
+                0 8px 32px rgba(61, 35, 20, 0.2),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            position: relative;
+        }
+
+        /* Journal binding decoration */
+        .notes-panel::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg,
+                var(--color-ember) 0%,
+                var(--color-amber) 50%,
+                var(--color-ember) 100%);
+            opacity: 0.5;
+        }
+
+        .notes-header {
+            padding: 18px 24px 18px 40px;
+            background: rgba(0,0,0,0.2);
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-weight: 600;
+            color: var(--color-warm-cream);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.2);
+        }
+
+        .notes-header::before {
+            content: '✍️';
+            font-size: 20px;
+        }
+
+        .notes-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px 20px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .notes-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .notes-content::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .notes-content::-webkit-scrollbar-thumb {
+            background: var(--color-amber);
+            border-radius: 4px;
+            opacity: 0.6;
+        }
+
+        .note-input-area {
+            display: flex;
+            gap: 10px;
+            padding: 20px 24px 20px 40px;
+            background: rgba(0,0,0,0.15);
+            border-top: 1px solid rgba(212, 165, 116, 0.2);
+            flex-direction: column;
+        }
+
+        .input-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 16px;
+            background: rgba(245, 230, 211, 0.1);
+            color: var(--color-warm-cream);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 200ms ease;
+            font-size: 13px;
+        }
+
+        .tab-btn.active {
+            background: var(--color-ember);
+            border-color: var(--color-ember);
+            box-shadow: 0 2px 8px rgba(198, 93, 59, 0.4);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(245, 230, 211, 0.15);
+            border-color: var(--color-amber);
+        }
+
+        .input-content {
+            display: none;
+            flex: 1;
+        }
+
+        .input-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .note-textarea {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 10px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 14px;
+            resize: none;
+            min-height: 70px;
+            background: rgba(253, 248, 240, 0.95);
+            color: var(--color-dark-wood);
+            transition: all 200ms ease;
+        }
+
+        .note-textarea::placeholder {
+            color: var(--color-medium-wood);
+            opacity: 0.6;
+        }
+
+        .note-textarea:focus {
+            outline: none;
+            border-color: var(--color-ember);
+            box-shadow: 0 0 0 3px rgba(198, 93, 59, 0.2);
+            background: var(--color-parchment);
+        }
+
+        #drawingCanvas {
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 10px;
+            background: rgba(253, 248, 240, 0.95);
+            cursor: crosshair;
+            display: block;
+            width: 100%;
+            height: 150px;
+            touch-action: none;
+        }
+
+        .canvas-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .color-input {
+            width: 42px;
+            height: 34px;
+            border: 2px solid rgba(212, 165, 116, 0.4);
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 2px;
+            background: var(--color-parchment);
+        }
+
+        .size-input {
+            padding: 8px 10px;
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 6px;
+            font-size: 12px;
+            width: 65px;
+            background: var(--color-parchment);
+            color: var(--color-dark-wood);
+        }
+
+        .pressure-indicator {
+            font-size: 11px;
+            color: var(--color-amber);
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+        }
+
+        .add-note-btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--color-forest) 0%, #3D6B1E 100%);
+            color: var(--color-warm-cream);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 250ms ease;
+            white-space: nowrap;
+            align-self: flex-end;
+            margin-top: 10px;
+            box-shadow: 0 3px 10px rgba(45, 80, 22, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .add-note-btn::before {
+            content: '🍂';
+        }
+
+        .add-note-btn:hover {
+            background: linear-gradient(135deg, #3D6B1E 0%, var(--color-forest) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(45, 80, 22, 0.5);
+        }
+
+        .note-item {
+            padding: 16px;
+            background: linear-gradient(135deg,
+                rgba(253, 248, 240, 0.95) 0%,
+                rgba(245, 230, 211, 0.9) 100%);
+            border: 1px solid rgba(139, 90, 43, 0.2);
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(61, 35, 20, 0.1);
+            color: var(--color-dark-wood);
+        }
+
+        .note-item-text {
+            margin-bottom: 10px;
+            word-wrap: break-word;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .note-item-page {
+            font-size: 10px;
+            color: var(--color-ember);
+            background: rgba(198, 93, 59, 0.12);
+            padding: 3px 8px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .note-item-time {
+            font-size: 11px;
+            color: var(--color-medium-wood);
+            opacity: 0.8;
+        }
+
+        .note-drawing {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--color-border);
+        }
+
+        .delete-note-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(139, 58, 58, 0.1);
+            border: none;
+            color: var(--color-error);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 200ms;
+        }
+
+        .delete-note-btn:hover {
+            background: rgba(139, 58, 58, 0.2);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            filter: grayscale(20%);
+        }
+
+        .empty-state-text {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-style: italic;
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-text-secondary);
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--color-border);
+            border-top-color: var(--color-ember);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(44, 36, 22, 0.7);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, var(--color-parchment) 0%, var(--color-warm-cream) 100%);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow:
+                0 20px 60px rgba(61, 35, 20, 0.3),
+                0 4px 16px rgba(61, 35, 20, 0.2);
+            border: 1px solid var(--color-border);
+        }
+
+        .modal-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--color-dark-wood);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-title::before {
+            content: '📕';
+            font-size: 24px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 14px;
+            font-family: inherit;
+            background: var(--color-parchment);
+            color: var(--color-dark-wood);
+            transition: all 200ms;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--color-ember);
+            box-shadow: 0 0 0 3px rgba(198, 93, 59, 0.15);
+        }
+
+        .modal-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--color-dark-wood);
+        }
+
+        .modal-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--color-ember);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            padding: 12px 22px;
+            background: var(--color-warm-cream);
+            color: var(--color-dark-wood);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 200ms;
+            font-weight: 500;
+        }
+
+        .btn-cancel:hover {
+            background: var(--color-border);
+        }
+
+        .btn-confirm {
+            padding: 12px 22px;
+            background: linear-gradient(135deg, var(--color-ember) 0%, var(--color-ember-glow) 100%);
+            color: var(--color-warm-cream);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 200ms;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(198, 93, 59, 0.3);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(198, 93, 59, 0.4);
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--color-dark-wood) 0%, var(--color-charcoal) 100%);
+            color: var(--color-warm-cream);
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+            max-width: 320px;
+            box-shadow: 0 8px 24px rgba(44, 36, 22, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, var(--color-forest) 0%, #3D6B1E 100%);
+        }
+
+        .toast.success::before {
+            content: '🌿';
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, var(--color-error) 0%, #6B2929 100%);
+        }
+
+        .toast.error::before {
+            content: '⚠️';
+        }
+
+        .toast.info::before {
+            content: '🔥';
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(139, 90, 43, 0.1);
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+
+        .zoom-controls span {
+            font-size: 11px;
+            min-width: 42px;
+            text-align: center;
+            color: var(--color-medium-wood);
+            font-weight: 500;
+        }
+
+        .btn-icon {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: var(--color-warm-cream);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--color-dark-wood);
+            transition: all 200ms;
+        }
+
+        .btn-icon:hover {
+            background: var(--color-ember);
+            color: var(--color-warm-cream);
+            border-color: var(--color-ember);
+        }
+
+        /* Decorative elements */
+        .cozy-corner {
+            position: fixed;
+            bottom: 20px;
+            left: 320px;
+            font-size: 32px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 260px;
+            }
+            .reader-container {
+                gap: 16px;
+                padding: 16px;
+            }
+            .cozy-corner {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 3px solid var(--color-light-wood);
+                max-height: 180px;
+            }
+            .file-list {
+                display: flex;
+                gap: 10px;
+                overflow-x: auto;
+                flex-direction: row;
+            }
+            .file-item {
+                flex-shrink: 0;
+                min-width: 140px;
+            }
+            .reader-container {
+                flex-direction: column;
+                gap: 16px;
+            }
+            .reader-panel, .notes-panel {
+                flex: 1;
+                min-height: 300px;
+            }
+            .notes-panel::before {
+                display: none;
+            }
+            body::before {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar - Wooden Bookshelf -->
+        <aside class="sidebar">
+            <div class="app-title">ReadNote Plus</div>
+            <div class="app-subtitle">Your cozy reading corner</div>
+            <div class="upload-section">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Add to Bookshelf
+                </button>
+                <input type="file" id="fileInput" accept=".pdf,.epub,.txt" multiple>
+            </div>
+            <div class="section-label">Your Books</div>
+            <div class="file-list" id="fileList"></div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="reader-container">
+                <!-- Reader Panel - Open Book -->
+                <div class="reader-panel">
+                    <div class="reader-header">
+                        <span class="reader-header-title" id="currentFile">Select a book to begin</span>
+                        <div class="reader-header-controls">
+                            <div class="page-controls" id="pageControls" style="display: none;">
+                                <button class="btn-icon" onclick="previousPage()" title="Previous page">‹</button>
+                                <span id="pageInfo">1 / 1</span>
+                                <button class="btn-icon" onclick="nextPage()" title="Next page">›</button>
+                            </div>
+                            <div class="zoom-controls" id="zoomControls" style="display: none;">
+                                <button class="btn-icon" onclick="zoomOut()" title="Zoom out">−</button>
+                                <span id="zoomLevel">100%</span>
+                                <button class="btn-icon" onclick="zoomIn()" title="Zoom in">+</button>
+                            </div>
+                            <button class="btn-small" onclick="exportToEbook()" title="Export to EPUB">Export EPUB</button>
+                            <button class="btn-small" onclick="exportNotes()" title="Export notes">Export Notes</button>
+                        </div>
+                    </div>
+                    <div class="reader-content" id="readerContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏡</div>
+                            <div class="empty-state-text">Curl up with a good book...<br>Upload a PDF, EPUB, or TXT to get started</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes Panel - Leather Journal -->
+                <div class="notes-panel">
+                    <div class="notes-header">Reading Journal</div>
+                    <div class="notes-content" id="notesContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🕯️</div>
+                            <div class="empty-state-text">Your thoughts and sketches<br>will appear here</div>
+                        </div>
+                    </div>
+                    <div class="note-input-area">
+                        <div class="input-tabs">
+                            <button class="tab-btn active" onclick="switchTab('text')">📝 Write</button>
+                            <button class="tab-btn" onclick="switchTab('draw')">🖋️ Sketch</button>
+                        </div>
+
+                        <div id="textInput" class="input-content active">
+                            <textarea class="note-textarea" id="noteInput" placeholder="Jot down your thoughts..."></textarea>
+                        </div>
+
+                        <div id="drawInput" class="input-content">
+                            <div class="canvas-toolbar">
+                                <input type="color" id="brushColor" class="color-input" value="#3D2314" title="Ink color">
+                                <input type="number" id="brushSize" class="size-input" value="3" min="1" max="30" placeholder="Size" title="Brush size">
+                                <span class="pressure-indicator" id="pressureIndicator">Pressure: --</span>
+                                <button class="btn-small" onclick="clearDrawing()">Clear</button>
+                            </div>
+                            <canvas id="drawingCanvas"></canvas>
+                        </div>
+
+                        <button class="add-note-btn" onclick="addNote()">Save Note</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decorative fireplace corner -->
+    <div class="cozy-corner">🪵</div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-title">Export Your Book</div>
+            <input type="text" class="modal-input" id="ebookTitle" placeholder="Book title...">
+            <input type="text" class="modal-input" id="ebookAuthor" placeholder="Author name...">
+            <label class="modal-checkbox">
+                <input type="checkbox" id="includeNotes" checked>
+                Include my reading notes
+            </label>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeExportModal()">Cancel</button>
+                <button class="btn-confirm" onclick="confirmExport()">Create EPUB</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // State management
+        const state = {
+            files: [],
+            currentFileIndex: -1,
+            notes: {},
+            fileContents: {},
+            pdfDoc: null,
+            currentPage: 1,
+            totalPages: 1,
+            zoom: 1.0,
+            epubContent: null
+        };
+
+        // Load state from localStorage
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('readNotePlusState');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.notes = parsed.notes || {};
+                    showToast('Welcome back! Your notes are ready', 'success');
+                }
+            } catch (e) {
+                console.error('Failed to load state:', e);
+            }
+        }
+
+        // Save state to localStorage
+        function saveState() {
+            try {
+                const toSave = {
+                    notes: state.notes
+                };
+                localStorage.setItem('readNotePlusState', JSON.stringify(toSave));
+            } catch (e) {
+                console.error('Failed to save state:', e);
+            }
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        // File handling
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                await loadFile(file);
+            }
+            document.getElementById('fileInput').value = '';
+        });
+
+        async function loadFile(file) {
+            const fileData = {
+                name: file.name,
+                type: getFileType(file.name),
+                size: file.size,
+                content: null,
+                rawData: null,
+                index: state.files.length
+            };
+
+            showLoading();
+
+            try {
+                if (file.name.endsWith('.txt')) {
+                    fileData.content = await readTextFile(file);
+                    fileData.rawData = fileData.content;
+                } else if (file.name.endsWith('.pdf')) {
+                    fileData.rawData = await readArrayBuffer(file);
+                    fileData.content = 'PDF';
+                } else if (file.name.endsWith('.epub')) {
+                    fileData.rawData = await readArrayBuffer(file);
+                    fileData.content = await parseEpub(fileData.rawData);
+                }
+
+                state.files.push(fileData);
+                if (!state.notes[file.name]) {
+                    state.notes[file.name] = [];
+                }
+                renderFileList();
+                selectFile(state.files.length - 1);
+                showToast(`Added "${file.name}" to your bookshelf`, 'success');
+            } catch (error) {
+                console.error('Error loading file:', error);
+                showToast(`Couldn't load ${file.name}: ${error.message}`, 'error');
+                hideLoading();
+            }
+        }
+
+        function getFileType(filename) {
+            if (filename.endsWith('.pdf')) return 'PDF';
+            if (filename.endsWith('.epub')) return 'EPUB';
+            if (filename.endsWith('.txt')) return 'TXT';
+            return 'Unknown';
+        }
+
+        function readTextFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function readArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // EPUB Parser
+        async function parseEpub(arrayBuffer) {
+            try {
+                const zip = await JSZip.loadAsync(arrayBuffer);
+
+                const containerXml = await zip.file('META-INF/container.xml')?.async('text');
+                if (!containerXml) {
+                    throw new Error('Invalid EPUB: container.xml not found');
+                }
+
+                const parser = new DOMParser();
+                const containerDoc = parser.parseFromString(containerXml, 'text/xml');
+                const rootfileEl = containerDoc.querySelector('rootfile');
+                const opfPath = rootfileEl?.getAttribute('full-path');
+
+                if (!opfPath) {
+                    throw new Error('Invalid EPUB: rootfile not found');
+                }
+
+                const opfDir = opfPath.substring(0, opfPath.lastIndexOf('/') + 1);
+
+                const opfContent = await zip.file(opfPath)?.async('text');
+                if (!opfContent) {
+                    throw new Error('Invalid EPUB: content.opf not found');
+                }
+
+                const opfDoc = parser.parseFromString(opfContent, 'text/xml');
+
+                const titleEl = opfDoc.querySelector('metadata title, dc\\:title');
+                const authorEl = opfDoc.querySelector('metadata creator, dc\\:creator');
+                const title = titleEl?.textContent || 'Untitled';
+                const author = authorEl?.textContent || 'Unknown';
+
+                const spine = opfDoc.querySelectorAll('spine itemref');
+                const manifest = opfDoc.querySelectorAll('manifest item');
+
+                const manifestMap = {};
+                manifest.forEach(item => {
+                    manifestMap[item.getAttribute('id')] = {
+                        href: item.getAttribute('href'),
+                        mediaType: item.getAttribute('media-type')
+                    };
+                });
+
+                let fullContent = `<div class="epub-content">
+                    <h1>${escapeHtml(title)}</h1>
+                    <p class="epub-author">by ${escapeHtml(author)}</p>
+                    <hr>`;
+
+                const chapters = [];
+                for (const itemref of spine) {
+                    const idref = itemref.getAttribute('idref');
+                    const item = manifestMap[idref];
+
+                    if (item && item.mediaType?.includes('html')) {
+                        const contentPath = opfDir + item.href;
+                        const chapterContent = await zip.file(contentPath)?.async('text');
+
+                        if (chapterContent) {
+                            const chapterDoc = parser.parseFromString(chapterContent, 'text/html');
+                            const body = chapterDoc.body;
+
+                            if (body) {
+                                const images = body.querySelectorAll('img');
+                                for (const img of images) {
+                                    const src = img.getAttribute('src');
+                                    if (src) {
+                                        const imgPath = opfDir + src.replace(/^\.\.\//, '');
+                                        const imgFile = zip.file(imgPath);
+                                        if (imgFile) {
+                                            const imgData = await imgFile.async('base64');
+                                            const ext = src.split('.').pop().toLowerCase();
+                                            const mimeType = ext === 'png' ? 'image/png' :
+                                                           ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                                            img.setAttribute('src', `data:${mimeType};base64,${imgData}`);
+                                        }
+                                    }
+                                }
+
+                                chapters.push(body.innerHTML);
+                            }
+                        }
+                    }
+                }
+
+                fullContent += chapters.join('<hr class="chapter-break">');
+                fullContent += '</div>';
+
+                return {
+                    html: fullContent,
+                    title: title,
+                    author: author,
+                    chapters: chapters
+                };
+            } catch (error) {
+                console.error('EPUB parsing error:', error);
+                throw new Error('Failed to parse EPUB: ' + error.message);
+            }
+        }
+
+        // PDF Rendering
+        async function renderPdf(arrayBuffer) {
+            try {
+                state.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                state.totalPages = state.pdfDoc.numPages;
+                state.currentPage = 1;
+
+                document.getElementById('pageControls').style.display = 'flex';
+                document.getElementById('zoomControls').style.display = 'flex';
+                updatePageInfo();
+
+                await renderCurrentPage();
+            } catch (error) {
+                console.error('PDF rendering error:', error);
+                throw new Error('Failed to render PDF: ' + error.message);
+            }
+        }
+
+        async function renderCurrentPage() {
+            if (!state.pdfDoc) return;
+
+            const page = await state.pdfDoc.getPage(state.currentPage);
+            const viewport = page.getViewport({ scale: state.zoom * 1.5 });
+
+            const container = document.getElementById('readerContent');
+            container.innerHTML = '<div class="pdf-container" id="pdfContainer"></div>';
+            const pdfContainer = document.getElementById('pdfContainer');
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page';
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            pdfContainer.appendChild(canvas);
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            const textContent = await page.getTextContent();
+            const textItems = textContent.items.map(item => item.str).join(' ');
+            state.fileContents[state.files[state.currentFileIndex].name] =
+                (state.fileContents[state.files[state.currentFileIndex].name] || '') + textItems + '\n';
+        }
+
+        async function renderAllPdfPages() {
+            if (!state.pdfDoc) return '';
+
+            let fullText = '';
+            for (let i = 1; i <= state.totalPages; i++) {
+                const page = await state.pdfDoc.getPage(i);
+                const textContent = await page.getTextContent();
+                const textItems = textContent.items.map(item => item.str).join(' ');
+                fullText += textItems + '\n\n';
+            }
+            return fullText;
+        }
+
+        function updatePageInfo() {
+            document.getElementById('pageInfo').textContent = `${state.currentPage} / ${state.totalPages}`;
+            document.getElementById('zoomLevel').textContent = `${Math.round(state.zoom * 100)}%`;
+        }
+
+        function previousPage() {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                updatePageInfo();
+                renderCurrentPage();
+            }
+        }
+
+        function nextPage() {
+            if (state.currentPage < state.totalPages) {
+                state.currentPage++;
+                updatePageInfo();
+                renderCurrentPage();
+            }
+        }
+
+        function zoomIn() {
+            if (state.zoom < 3) {
+                state.zoom += 0.25;
+                updatePageInfo();
+                if (state.pdfDoc) renderCurrentPage();
+            }
+        }
+
+        function zoomOut() {
+            if (state.zoom > 0.5) {
+                state.zoom -= 0.25;
+                updatePageInfo();
+                if (state.pdfDoc) renderCurrentPage();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('readerContent').innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Opening your book...</div>
+                </div>
+            `;
+        }
+
+        function hideLoading() {}
+
+        function renderFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = state.files.map((file, index) => `
+                <div class="file-item ${state.currentFileIndex === index ? 'active' : ''}" onclick="selectFile(${index})">
+                    <span class="file-name">${escapeHtml(file.name)}</span>
+                    <div class="file-meta">
+                        <span class="file-size">${formatFileSize(file.size)}</span>
+                        <span class="file-type">${file.type}</span>
+                    </div>
+                    <button class="delete-file" onclick="deleteFile(${index}, event)">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        async function selectFile(index) {
+            state.currentFileIndex = index;
+            const file = state.files[index];
+
+            document.getElementById('currentFile').textContent = escapeHtml(file.name);
+
+            document.getElementById('pageControls').style.display = 'none';
+            document.getElementById('zoomControls').style.display = 'none';
+            state.pdfDoc = null;
+            state.zoom = 1.0;
+
+            if (file.type === 'PDF') {
+                await renderPdf(file.rawData);
+            } else if (file.type === 'EPUB') {
+                document.getElementById('readerContent').innerHTML = file.content.html;
+                state.fileContents[file.name] = file.content.html;
+            } else {
+                document.getElementById('readerContent').innerHTML =
+                    `<div class="text-content">${escapeHtml(file.content)}</div>`;
+                state.fileContents[file.name] = file.content;
+            }
+
+            renderNotes();
+            renderFileList();
+        }
+
+        function deleteFile(index, event) {
+            event.stopPropagation();
+            const file = state.files[index];
+            state.files.splice(index, 1);
+            delete state.fileContents[file.name];
+
+            if (state.currentFileIndex === index) {
+                state.currentFileIndex = state.files.length > 0 ? 0 : -1;
+                state.pdfDoc = null;
+                document.getElementById('pageControls').style.display = 'none';
+                document.getElementById('zoomControls').style.display = 'none';
+
+                if (state.currentFileIndex >= 0) {
+                    selectFile(0);
+                } else {
+                    document.getElementById('currentFile').textContent = 'Select a book to begin';
+                    document.getElementById('readerContent').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏡</div>
+                            <div class="empty-state-text">Curl up with a good book...<br>Upload a PDF, EPUB, or TXT to get started</div>
+                        </div>
+                    `;
+                    document.getElementById('notesContent').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🕯️</div>
+                            <div class="empty-state-text">Your thoughts and sketches<br>will appear here</div>
+                        </div>
+                    `;
+                }
+            } else if (state.currentFileIndex > index) {
+                state.currentFileIndex--;
+            }
+            renderFileList();
+        }
+
+        // Drawing canvas with pressure sensitivity
+        let drawingCanvas, drawCtx, isDrawing = false;
+        let lastX, lastY, lastPressure = 0.5;
+
+        function initDrawingCanvas() {
+            drawingCanvas = document.getElementById('drawingCanvas');
+            if (!drawingCanvas) return;
+
+            drawCtx = drawingCanvas.getContext('2d');
+
+            const rect = drawingCanvas.getBoundingClientRect();
+            drawingCanvas.width = rect.width * window.devicePixelRatio;
+            drawingCanvas.height = rect.height * window.devicePixelRatio;
+            drawCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            drawingCanvas.removeEventListener('pointerdown', startDrawing);
+            drawingCanvas.removeEventListener('pointermove', draw);
+            drawingCanvas.removeEventListener('pointerup', stopDrawing);
+            drawingCanvas.removeEventListener('pointerleave', stopDrawing);
+
+            drawingCanvas.addEventListener('pointerdown', startDrawing);
+            drawingCanvas.addEventListener('pointermove', draw);
+            drawingCanvas.addEventListener('pointerup', stopDrawing);
+            drawingCanvas.addEventListener('pointerleave', stopDrawing);
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = drawingCanvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+            lastPressure = e.pressure || 0.5;
+
+            drawCtx.beginPath();
+            drawCtx.moveTo(lastX, lastY);
+
+            updatePressureIndicator(e.pressure);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = drawingCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const pressure = e.pressure || 0.5;
+
+            const baseSize = parseInt(document.getElementById('brushSize').value);
+            const pressureSize = baseSize * (0.5 + pressure);
+
+            drawCtx.lineTo(x, y);
+            drawCtx.strokeStyle = document.getElementById('brushColor').value;
+            drawCtx.lineWidth = pressureSize;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+
+            drawCtx.globalAlpha = 0.5 + (pressure * 0.5);
+            drawCtx.stroke();
+            drawCtx.globalAlpha = 1;
+
+            drawCtx.beginPath();
+            drawCtx.moveTo(x, y);
+
+            lastX = x;
+            lastY = y;
+            lastPressure = pressure;
+
+            updatePressureIndicator(pressure);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            drawCtx.beginPath();
+        }
+
+        function updatePressureIndicator(pressure) {
+            const indicator = document.getElementById('pressureIndicator');
+            if (pressure !== undefined && pressure > 0) {
+                indicator.textContent = `Pressure: ${Math.round(pressure * 100)}%`;
+            } else {
+                indicator.textContent = 'Pressure: N/A';
+            }
+        }
+
+        function clearDrawing() {
+            if (drawCtx) {
+                drawCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.input-content').forEach(content => content.classList.remove('active'));
+
+            if (tab === 'text') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('textInput').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('drawInput').classList.add('active');
+                setTimeout(() => initDrawingCanvas(), 50);
+            }
+        }
+
+        // Notes handling
+        function addNote() {
+            const currentTab = document.getElementById('drawInput').classList.contains('active') ? 'draw' : 'text';
+
+            if (state.currentFileIndex === -1) {
+                showToast('Please open a book first', 'error');
+                return;
+            }
+
+            const file = state.files[state.currentFileIndex];
+            let noteData = null;
+
+            if (currentTab === 'text') {
+                const noteInput = document.getElementById('noteInput');
+                const noteText = noteInput.value.trim();
+                if (!noteText) {
+                    showToast('Write something first', 'error');
+                    return;
+                }
+                noteData = { type: 'text', content: noteText };
+                noteInput.value = '';
+            } else {
+                const imageData = drawCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height);
+                const hasContent = imageData.data.some((value, index) => {
+                    return index % 4 === 3 && value > 0;
+                });
+
+                if (!hasContent) {
+                    showToast('Sketch something first', 'error');
+                    return;
+                }
+
+                noteData = { type: 'drawing', content: drawingCanvas.toDataURL('image/png') };
+                clearDrawing();
+            }
+
+            const note = {
+                id: Date.now(),
+                data: noteData,
+                timestamp: new Date().toLocaleString(),
+                page: state.pdfDoc ? state.currentPage : null
+            };
+
+            if (!state.notes[file.name]) {
+                state.notes[file.name] = [];
+            }
+            state.notes[file.name].push(note);
+            renderNotes();
+            saveState();
+            showToast('Note saved to your journal', 'success');
+        }
+
+        function renderNotes() {
+            if (state.currentFileIndex === -1) return;
+
+            const file = state.files[state.currentFileIndex];
+            const notes = state.notes[file.name] || [];
+            const notesContent = document.getElementById('notesContent');
+
+            if (notes.length === 0) {
+                notesContent.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🕯️</div>
+                        <div class="empty-state-text">Your thoughts and sketches<br>will appear here</div>
+                    </div>
+                `;
+            } else {
+                notesContent.innerHTML = notes.map(note => `
+                    <div class="note-item">
+                        <button class="delete-note-btn" onclick="deleteNote('${note.id}')" title="Delete note">×</button>
+                        ${note.page ? `<span class="note-item-page">Page ${note.page}</span>` : ''}
+                        ${note.data.type === 'text'
+                            ? `<div class="note-item-text">${escapeHtml(note.data.content)}</div>`
+                            : `<img src="${note.data.content}" class="note-drawing" alt="Sketch">`
+                        }
+                        <div class="note-item-time">${note.timestamp}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function deleteNote(noteId) {
+            if (state.currentFileIndex === -1) return;
+
+            const file = state.files[state.currentFileIndex];
+            const notes = state.notes[file.name];
+            const index = notes.findIndex(n => n.id == noteId);
+
+            if (index > -1) {
+                notes.splice(index, 1);
+                renderNotes();
+                saveState();
+                showToast('Note removed', 'success');
+            }
+        }
+
+        function clearAllNotes() {
+            if (state.currentFileIndex === -1) return;
+
+            if (confirm('Clear all notes for this book?')) {
+                const file = state.files[state.currentFileIndex];
+                state.notes[file.name] = [];
+                renderNotes();
+                saveState();
+                showToast('Journal cleared', 'success');
+            }
+        }
+
+        // Export notes as JSON
+        function exportNotes() {
+            if (state.currentFileIndex === -1) {
+                showToast('Please open a book first', 'error');
+                return;
+            }
+
+            const file = state.files[state.currentFileIndex];
+            const notes = state.notes[file.name] || [];
+
+            if (notes.length === 0) {
+                showToast('No notes to export', 'error');
+                return;
+            }
+
+            const exportData = {
+                fileName: file.name,
+                exportDate: new Date().toISOString(),
+                notes: notes
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${file.name.replace(/\.[^/.]+$/, '')}_notes.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Notes exported', 'success');
+        }
+
+        // Export functionality
+        function exportToEbook() {
+            if (state.currentFileIndex === -1) {
+                showToast('Please open a book first', 'error');
+                return;
+            }
+
+            const file = state.files[state.currentFileIndex];
+            document.getElementById('ebookTitle').value = file.name.replace(/\.[^/.]+$/, '');
+            document.getElementById('ebookAuthor').value = '';
+            document.getElementById('exportModal').classList.add('active');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('active');
+        }
+
+        async function confirmExport() {
+            if (state.currentFileIndex === -1) return;
+
+            const title = document.getElementById('ebookTitle').value || 'Untitled';
+            const author = document.getElementById('ebookAuthor').value || 'Unknown Author';
+            const includeNotes = document.getElementById('includeNotes').checked;
+            const file = state.files[state.currentFileIndex];
+            const notes = includeNotes ? (state.notes[file.name] || []) : [];
+
+            showToast('Creating your EPUB...', 'info');
+
+            try {
+                let textContent = '';
+                if (file.type === 'PDF') {
+                    textContent = await renderAllPdfPages();
+                } else if (file.type === 'EPUB') {
+                    textContent = file.content.html;
+                } else {
+                    textContent = file.content;
+                }
+
+                const zip = new JSZip();
+
+                zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+
+                zip.file('META-INF/container.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+    </rootfiles>
+</container>`);
+
+                const uuid = 'urn:uuid:' + generateUUID();
+                zip.file('OEBPS/content.opf', `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:identifier id="BookId">${uuid}</dc:identifier>
+        <dc:title>${escapeXml(title)}</dc:title>
+        <dc:creator>${escapeXml(author)}</dc:creator>
+        <dc:language>en</dc:language>
+        <meta property="dcterms:modified">${new Date().toISOString().split('.')[0]}Z</meta>
+    </metadata>
+    <manifest>
+        <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+        <item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>
+        <item id="style" href="style.css" media-type="text/css"/>
+        ${notes.length > 0 ? '<item id="notes" href="notes.xhtml" media-type="application/xhtml+xml"/>' : ''}
+    </manifest>
+    <spine>
+        <itemref idref="nav"/>
+        <itemref idref="content"/>
+        ${notes.length > 0 ? '<itemref idref="notes"/>' : ''}
+    </spine>
+</package>`);
+
+                zip.file('OEBPS/nav.xhtml', `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title>Table of Contents</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+<body>
+    <nav epub:type="toc">
+        <h1>Table of Contents</h1>
+        <ol>
+            <li><a href="content.xhtml">Content</a></li>
+            ${notes.length > 0 ? '<li><a href="notes.xhtml">Reading Notes</a></li>' : ''}
+        </ol>
+    </nav>
+</body>
+</html>`);
+
+                zip.file('OEBPS/style.css', `
+body {
+    font-family: Georgia, 'Times New Roman', serif;
+    margin: 2em;
+    line-height: 1.7;
+    color: #3D2314;
+    background: #FDF8F0;
+}
+h1, h2, h3 {
+    color: #5C3D2E;
+    margin-top: 1.5em;
+}
+p {
+    text-align: justify;
+    margin-bottom: 1em;
+}
+.note {
+    background: #F5E6D3;
+    padding: 1em;
+    margin: 1em 0;
+    border-left: 4px solid #C65D3B;
+    border-radius: 4px;
+}
+.note-text {
+    font-style: italic;
+    color: #3D2314;
+}
+.note-meta {
+    font-size: 0.9em;
+    color: #8B5A2B;
+    margin-top: 0.5em;
+}
+.note-drawing {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+img {
+    max-width: 100%;
+    height: auto;
+}
+`);
+
+                let contentHtml = '';
+                if (file.type === 'EPUB') {
+                    contentHtml = textContent;
+                } else if (file.type === 'PDF') {
+                    contentHtml = textContent.split('\n\n').map(para =>
+                        para.trim() ? `<p>${escapeXml(para.trim())}</p>` : ''
+                    ).join('\n');
+                } else {
+                    contentHtml = textContent.split('\n').map(line =>
+                        line.trim() ? `<p>${escapeXml(line)}</p>` : ''
+                    ).join('\n');
+                }
+
+                zip.file('OEBPS/content.xhtml', `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>${escapeXml(title)}</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+<body>
+    <h1>${escapeXml(title)}</h1>
+    <p><em>by ${escapeXml(author)}</em></p>
+    <hr/>
+    ${contentHtml}
+</body>
+</html>`);
+
+                if (notes.length > 0) {
+                    let notesHtml = notes.map((note, index) => {
+                        if (note.data.type === 'text') {
+                            return `<div class="note">
+                                <p class="note-text">"${escapeXml(note.data.content)}"</p>
+                                <p class="note-meta">${note.page ? `Page ${note.page} • ` : ''}${note.timestamp}</p>
+                            </div>`;
+                        } else {
+                            return `<div class="note">
+                                <img class="note-drawing" src="${note.data.content}" alt="Sketch ${index + 1}"/>
+                                <p class="note-meta">${note.page ? `Page ${note.page} • ` : ''}${note.timestamp}</p>
+                            </div>`;
+                        }
+                    }).join('\n');
+
+                    zip.file('OEBPS/notes.xhtml', `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Reading Notes</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+<body>
+    <h1>Reading Notes</h1>
+    <p><em>Notes for: ${escapeXml(title)}</em></p>
+    <hr/>
+    ${notesHtml}
+</body>
+</html>`);
+                }
+
+                const epubBlob = await zip.generateAsync({
+                    type: 'blob',
+                    mimeType: 'application/epub+zip',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 9 }
+                });
+
+                const url = URL.createObjectURL(epubBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${title}.epub`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                closeExportModal();
+                showToast('Your EPUB is ready!', 'success');
+
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Export failed: ' + error.message, 'error');
+            }
+        }
+
+        // Utility functions
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function escapeXml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && state.pdfDoc) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    previousPage();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    nextPage();
+                }
+            }
+
+            if ((e.ctrlKey || e.metaKey) && state.pdfDoc) {
+                if (e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    zoomIn();
+                } else if (e.key === '-') {
+                    e.preventDefault();
+                    zoomOut();
+                }
+            }
+        });
+
+        // Initialize
+        loadState();
+        renderFileList();
+        setTimeout(() => initDrawingCanvas(), 100);
+
+        window.addEventListener('resize', () => {
+            if (document.getElementById('drawInput').classList.contains('active')) {
+                initDrawingCanvas();
+            }
+        });
+    </script>
+</body>
+</html>
