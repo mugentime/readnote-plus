@@ -415,7 +415,7 @@
         .page-content {
             flex: 1;
             padding: var(--page-margin);
-            overflow: hidden;
+            overflow: auto;
             font-family: 'Literata', Georgia, serif;
             font-size: var(--font-size);
             line-height: var(--line-height);
@@ -423,6 +423,10 @@
             text-align: justify;
             hyphens: auto;
             -webkit-hyphens: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         /* CSS columns-based pagination for smooth text flow */
@@ -440,8 +444,9 @@
 
         /* Page text content styling */
         .page-text-content {
-            height: 100%;
-            overflow: hidden;
+            width: 100%;
+            max-width: 700px;
+            text-align: justify;
         }
 
         .page-text-content p {
@@ -458,6 +463,14 @@
             height: auto;
             display: block;
             margin: 1em auto;
+        }
+
+        /* PDF canvas styling */
+        .page-content canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .page-content h1, .page-content h2, .page-content h3 {
@@ -2097,34 +2110,74 @@
 
         // PDF Rendering
         async function renderPdf(data) {
-            state.pdfDoc = await pdfjsLib.getDocument({ data }).promise;
-            state.totalPages = state.pdfDoc.numPages;
-            state.currentPage = 1;
-            await renderPdfPage(state.currentPage);
+            try {
+                state.pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+                state.totalPages = state.pdfDoc.numPages;
+                state.currentPage = 1;
+                state.pages = null; // Clear text pages
+                state.pageWrapper = null;
+
+                // Wait for container to have dimensions
+                await new Promise(r => requestAnimationFrame(r));
+                await renderPdfPage(state.currentPage);
+            } catch (err) {
+                console.error('PDF load error:', err);
+                showToast('Failed to load PDF: ' + err.message, 'error');
+            }
         }
 
         async function renderPdfPage(pageNum) {
-            const page = await state.pdfDoc.getPage(pageNum);
-            const container = document.getElementById('pageContent');
+            if (!state.pdfDoc) return;
 
-            const containerWidth = container.clientWidth - (state.settings.margin * 2);
-            const viewport = page.getViewport({ scale: 1 });
-            const scale = containerWidth / viewport.width;
-            const scaledViewport = page.getViewport({ scale });
+            try {
+                const page = await state.pdfDoc.getPage(pageNum);
+                const container = document.getElementById('pageContent');
 
-            const canvas = document.createElement('canvas');
-            canvas.width = scaledViewport.width;
-            canvas.height = scaledViewport.height;
+                // Ensure container has dimensions
+                let containerWidth = container.clientWidth - (state.settings.margin * 2);
+                let containerHeight = container.clientHeight - (state.settings.margin * 2);
 
-            await page.render({
-                canvasContext: canvas.getContext('2d'),
-                viewport: scaledViewport
-            }).promise;
+                // Fallback dimensions if container not yet laid out
+                if (containerWidth <= 0) containerWidth = 600;
+                if (containerHeight <= 0) containerHeight = 800;
 
-            container.innerHTML = '';
-            container.appendChild(canvas);
+                const viewport = page.getViewport({ scale: 1 });
 
-            updatePageInfo();
+                // Scale to fit width, but also check height
+                let scale = containerWidth / viewport.width;
+                const scaledHeight = viewport.height * scale;
+
+                // If too tall, scale to fit height instead
+                if (scaledHeight > containerHeight) {
+                    scale = containerHeight / viewport.height;
+                }
+
+                const scaledViewport = page.getViewport({ scale });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = scaledViewport.width;
+                canvas.height = scaledViewport.height;
+                canvas.style.display = 'block';
+                canvas.style.margin = '0 auto';
+                canvas.style.maxWidth = '100%';
+                canvas.style.height = 'auto';
+
+                const ctx = canvas.getContext('2d');
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: scaledViewport
+                }).promise;
+
+                container.innerHTML = '';
+                container.appendChild(canvas);
+
+                state.currentPage = pageNum;
+                updatePageInfo();
+                updateReadingProgress();
+            } catch (err) {
+                console.error('PDF page render error:', err);
+                showToast('Failed to render page: ' + err.message, 'error');
+            }
         }
 
         // Book rendering with pagination
@@ -2236,11 +2289,12 @@
             displayPage(1);
         }
 
-        function displayPage(pageNum) {
+        async function displayPage(pageNum) {
             const container = document.getElementById('pageContent');
 
             if (state.pdfDoc) {
-                renderPdfPage(pageNum);
+                await renderPdfPage(pageNum);
+                return; // renderPdfPage handles state updates
             } else if (state.pages && state.pages[pageNum - 1] !== undefined) {
                 container.innerHTML = `<div class="page-text-content">${state.pages[pageNum - 1]}</div>`;
             }
