@@ -2091,6 +2091,13 @@
                 document.getElementById('chapterControls').style.display = 'none';
             }
 
+            // Wait for container to be laid out before rendering
+            await new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(resolve);
+                });
+            });
+
             if (file.type === 'PDF') {
                 await renderPdf(file.rawData);
             } else {
@@ -2111,15 +2118,23 @@
         // PDF Rendering
         async function renderPdf(data) {
             try {
+                showToast('Loading PDF...');
                 state.pdfDoc = await pdfjsLib.getDocument({ data }).promise;
                 state.totalPages = state.pdfDoc.numPages;
                 state.currentPage = 1;
                 state.pages = null; // Clear text pages
                 state.pageWrapper = null;
 
-                // Wait for container to have dimensions
-                await new Promise(r => requestAnimationFrame(r));
+                // Wait for container to have proper dimensions
+                const container = document.getElementById('pageContent');
+                let attempts = 0;
+                while (container.clientWidth <= 0 && attempts < 20) {
+                    await new Promise(r => setTimeout(r, 50));
+                    attempts++;
+                }
+
                 await renderPdfPage(state.currentPage);
+                showToast(`PDF loaded: ${state.totalPages} pages`, 'success');
             } catch (err) {
                 console.error('PDF load error:', err);
                 showToast('Failed to load PDF: ' + err.message, 'error');
@@ -2133,36 +2148,39 @@
                 const page = await state.pdfDoc.getPage(pageNum);
                 const container = document.getElementById('pageContent');
 
-                // Ensure container has dimensions
-                let containerWidth = container.clientWidth - (state.settings.margin * 2);
-                let containerHeight = container.clientHeight - (state.settings.margin * 2);
+                // Get container dimensions
+                let containerWidth = container.clientWidth;
+                let containerHeight = container.clientHeight;
 
-                // Fallback dimensions if container not yet laid out
-                if (containerWidth <= 0) containerWidth = 600;
-                if (containerHeight <= 0) containerHeight = 800;
+                // Use reasonable defaults if container not ready
+                if (containerWidth <= 0) containerWidth = 700;
+                if (containerHeight <= 0) containerHeight = 900;
+
+                // Account for padding
+                const padding = state.settings.margin;
+                const availableWidth = containerWidth - (padding * 2);
+                const availableHeight = containerHeight - (padding * 2);
 
                 const viewport = page.getViewport({ scale: 1 });
 
-                // Scale to fit width, but also check height
-                let scale = containerWidth / viewport.width;
-                const scaledHeight = viewport.height * scale;
-
-                // If too tall, scale to fit height instead
-                if (scaledHeight > containerHeight) {
-                    scale = containerHeight / viewport.height;
-                }
+                // Calculate scale to fit within available space
+                const scaleWidth = availableWidth / viewport.width;
+                const scaleHeight = availableHeight / viewport.height;
+                const scale = Math.min(scaleWidth, scaleHeight, 2); // Cap at 2x for quality
 
                 const scaledViewport = page.getViewport({ scale });
 
+                // Create high-DPI canvas for crisp rendering
                 const canvas = document.createElement('canvas');
-                canvas.width = scaledViewport.width;
-                canvas.height = scaledViewport.height;
-                canvas.style.display = 'block';
-                canvas.style.margin = '0 auto';
-                canvas.style.maxWidth = '100%';
-                canvas.style.height = 'auto';
+                const pixelRatio = window.devicePixelRatio || 1;
+                canvas.width = scaledViewport.width * pixelRatio;
+                canvas.height = scaledViewport.height * pixelRatio;
+                canvas.style.width = scaledViewport.width + 'px';
+                canvas.style.height = scaledViewport.height + 'px';
 
                 const ctx = canvas.getContext('2d');
+                ctx.scale(pixelRatio, pixelRatio);
+
                 await page.render({
                     canvasContext: ctx,
                     viewport: scaledViewport
