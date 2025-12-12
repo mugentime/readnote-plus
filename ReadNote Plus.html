@@ -1621,7 +1621,9 @@
                     fileData.rawData = await readAsArrayBuffer(file);
                     // Extract text from PDF for EPUB export
                     showToast('Extracting text from PDF (this may take a moment)...');
-                    const pdfExtract = await extractPdfText(fileData.rawData);
+                    // Create a copy of the ArrayBuffer for text extraction (PDF.js consumes the buffer)
+                    const bufferCopy = fileData.rawData.slice(0);
+                    const pdfExtract = await extractPdfText(bufferCopy);
                     fileData.content = pdfExtract.content;
                     fileData.chapters = pdfExtract.chapters;
                     fileData.metadata.title = file.name.replace(/\.pdf$/i, '');
