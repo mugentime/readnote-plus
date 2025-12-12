@@ -13,3 +13,16 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node
+node_modules/
+package-lock.json
+
+# Test files
+tests/
+test-results/
+nul
+
+# Sample books (user content)
+*.epub
+*.pdf
