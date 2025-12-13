@@ -535,130 +535,311 @@
             color: var(--color-text-secondary);
         }
 
-        /* Library Grid View */
+        /* Realistic Bookshelf Library */
         .library-grid {
             width: 100%;
             height: 100%;
-            padding: 40px;
             overflow-y: auto;
-            background: var(--color-bg);
+            background: linear-gradient(180deg, #2C1810 0%, #1A0F0A 100%);
+            position: relative;
+        }
+
+        .library-grid::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 300px;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(255,200,100,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 80%, rgba(255,150,50,0.1) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         .library-header {
             text-align: center;
-            margin-bottom: 40px;
+            padding: 40px 20px 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .library-title {
             font-family: 'Literata', Georgia, serif;
-            font-size: 2em;
-            color: var(--color-wood-dark);
+            font-size: 2.2em;
+            color: #F5E6D3;
             margin: 0 0 8px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
         }
 
         .library-subtitle {
-            color: var(--color-text-secondary);
-            font-size: 1.1em;
+            color: #D4A574;
+            font-size: 1em;
             margin: 0;
+            font-style: italic;
         }
 
-        .book-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Bookshelf Structure */
+        .bookshelf-container {
+            padding: 0 40px 40px;
+            position: relative;
+            z-index: 1;
         }
 
-        .book-card {
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .book-card:hover {
-            transform: translateY(-8px);
-        }
-
-        .book-cover-large {
-            width: 100%;
-            aspect-ratio: 2/3;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
-            background: linear-gradient(135deg, var(--color-wood-light) 0%, var(--color-wood-dark) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            color: var(--color-cream);
+        .bookshelf {
+            max-width: 1100px;
+            margin: 0 auto 0;
             position: relative;
         }
 
-        .book-cover-large img {
+        .shelf-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px 30px 0;
+            min-height: 220px;
+            position: relative;
+            flex-wrap: wrap;
+        }
+
+        /* Wooden Shelf */
+        .shelf-row::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(180deg,
+                #8B5A2B 0%,
+                #6B4423 30%,
+                #5C3D2E 60%,
+                #4A3020 100%);
+            border-radius: 3px;
+            box-shadow:
+                0 4px 8px rgba(0,0,0,0.4),
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 2px 2px rgba(255,255,255,0.1),
+                inset 0 -2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Shelf brackets */
+        .shelf-row::before {
+            content: '';
+            position: absolute;
+            bottom: 15px;
+            left: 10px;
+            right: 10px;
+            height: 8px;
+            background: linear-gradient(90deg,
+                #3D2314 0%, transparent 5%,
+                transparent 95%, #3D2314 100%);
+            z-index: -1;
+        }
+
+        /* 3D Book on Shelf */
+        .shelf-book {
+            width: 50px;
+            height: 180px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease, margin 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .shelf-book:hover {
+            transform: translateY(-15px) rotateY(-20deg);
+            margin-right: 20px;
+            z-index: 10;
+        }
+
+        /* Book Spine (front face) */
+        .book-spine {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                rgba(0,0,0,0.3) 0%,
+                rgba(255,255,255,0.1) 10%,
+                transparent 30%,
+                transparent 70%,
+                rgba(0,0,0,0.2) 100%);
+            border-radius: 2px 4px 4px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 4px;
+            box-shadow:
+                2px 2px 6px rgba(0,0,0,0.4),
+                inset -2px 0 4px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .book-spine-title {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-family: 'Literata', Georgia, serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            max-height: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        .book-spine-author {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-size: 8px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 8px;
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        /* Book Cover (side face - visible on hover) */
+        .book-cover-3d {
+            position: absolute;
+            width: 120px;
+            height: 100%;
+            left: 100%;
+            transform-origin: left center;
+            transform: rotateY(90deg);
+            background: #f5f5f5;
+            border-radius: 0 4px 4px 0;
+            overflow: hidden;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .book-cover-3d img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .book-card-info {
-            padding: 12px 4px;
-            text-align: center;
-        }
-
-        .book-card-title {
-            font-family: 'Literata', Georgia, serif;
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--color-text);
-            margin-bottom: 4px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .book-card-author {
-            font-size: 12px;
-            color: var(--color-text-secondary);
-        }
-
-        .book-card-progress {
-            margin-top: 8px;
-            height: 4px;
-            background: var(--color-border);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .book-card-progress-fill {
+        .book-cover-3d .no-cover {
+            width: 100%;
             height: 100%;
-            background: var(--color-accent);
-            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f4f0 0%, #e8e0d8 100%);
         }
 
+        .book-cover-3d .no-cover-title {
+            font-family: 'Literata', Georgia, serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #3D2314;
+            margin-bottom: 8px;
+        }
+
+        .book-cover-3d .no-cover-author {
+            font-size: 10px;
+            color: #8B5A2B;
+        }
+
+        /* Book page edges (top) */
+        .book-pages {
+            position: absolute;
+            top: 0;
+            left: 2px;
+            right: 2px;
+            height: 3px;
+            background: linear-gradient(90deg, #f5f5dc, #fffff0, #f5f5dc);
+            transform: translateY(-100%);
+            border-radius: 1px 1px 0 0;
+        }
+
+        /* Book colors - variety */
+        .shelf-book:nth-child(6n+1) .book-spine { background-color: #8B0000; }
+        .shelf-book:nth-child(6n+2) .book-spine { background-color: #1a365d; }
+        .shelf-book:nth-child(6n+3) .book-spine { background-color: #2D5016; }
+        .shelf-book:nth-child(6n+4) .book-spine { background-color: #4A3728; }
+        .shelf-book:nth-child(6n+5) .book-spine { background-color: #5D3E6B; }
+        .shelf-book:nth-child(6n+6) .book-spine { background-color: #8B4513; }
+
+        /* Book height variations */
+        .shelf-book:nth-child(3n+1) { height: 175px; }
+        .shelf-book:nth-child(3n+2) { height: 185px; }
+        .shelf-book:nth-child(5n+3) { height: 170px; }
+        .shelf-book:nth-child(7n+4) { width: 55px; }
+        .shelf-book:nth-child(11n+5) { width: 45px; }
+
+        /* Progress indicator on spine */
+        .book-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .book-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            transition: width 0.3s;
+        }
+
+        /* Empty Shelf State */
         .empty-library {
-            grid-column: 1 / -1;
             text-align: center;
-            padding: 60px 20px;
+            padding: 80px 20px;
         }
 
         .empty-library .empty-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
+            font-size: 80px;
+            margin-bottom: 20px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
         }
 
         .empty-library .empty-text {
-            font-size: 18px;
-            color: var(--color-text-secondary);
-            margin-bottom: 24px;
+            font-size: 20px;
+            color: #D4A574;
+            margin-bottom: 30px;
+            font-family: 'Literata', Georgia, serif;
         }
 
         .empty-library .upload-btn {
             display: inline-block;
             width: auto;
-            padding: 14px 32px;
+            padding: 16px 40px;
+            font-size: 16px;
+        }
+
+        /* Decorative elements */
+        .shelf-decoration {
+            position: absolute;
+            bottom: 25px;
+            font-size: 24px;
+            opacity: 0.8;
+        }
+
+        .shelf-decoration.left { left: 35px; }
+        .shelf-decoration.right { right: 35px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .library-grid::before { left: 0; }
+            .bookshelf-container { padding: 0 15px 30px; }
+            .shelf-row { padding: 15px 15px 0; gap: 6px; min-height: 180px; }
+            .shelf-book { width: 40px; height: 150px; }
+            .book-spine-title { font-size: 9px; }
+            .shelf-book:hover { transform: translateY(-10px); margin-right: 10px; }
         }
 
         /* Page Navigation Zones */
@@ -1265,6 +1446,90 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Full Page Reading Mode */
+        .app-container.full-page-mode .sidebar {
+            display: none;
+        }
+
+        .app-container.full-page-mode .notes-panel {
+            display: none;
+        }
+
+        .app-container.full-page-mode .reader-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            opacity: 0;
+            transform: translateY(-100%);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-container.full-page-mode .reader-header:hover,
+        .app-container.full-page-mode .reader-header.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .app-container.full-page-mode .main-content {
+            flex: 1;
+        }
+
+        .app-container.full-page-mode .page-view {
+            max-width: 900px;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .app-container.full-page-mode .page-container {
+            padding: 40px 20px;
+        }
+
+        /* Full page exit button - floating */
+        .exit-fullpage-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--color-wood-medium);
+            color: var(--color-cream);
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            opacity: 0.3;
+            transition: opacity 0.3s, transform 0.2s;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .exit-fullpage-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .app-container.full-page-mode .exit-fullpage-btn {
+            display: flex;
+        }
+
+        /* Full page toggle button style */
+        .btn-icon.fullpage-btn {
+            font-size: 16px;
+        }
+
+        .btn-icon.fullpage-btn.active {
+            background: var(--color-accent);
+            color: white;
+            border-color: var(--color-accent);
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .sidebar { width: 260px; }
@@ -1332,6 +1597,7 @@
                     <div class="control-group" id="chapterControls" style="display: none;">
                         <select id="chapterSelect" onchange="goToChapter(this.value)"></select>
                     </div>
+                    <button class="btn-icon fullpage-btn" id="fullPageBtn" onclick="toggleFullPage()" title="Full Page View">⛶</button>
                     <button class="btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
                     <button class="btn" onclick="openExportModal()">Export EPUB</button>
                 </div>
@@ -1341,19 +1607,15 @@
             <div class="reading-area">
                 <div class="reader-panel" id="readerPanel">
                     <div class="page-container" id="pageContainer">
-                        <!-- Library Grid View -->
+                        <!-- Bookshelf Library View -->
                         <div class="library-grid" id="libraryGrid">
                             <div class="library-header">
                                 <h2 class="library-title">📚 Your Library</h2>
-                                <p class="library-subtitle">Select a book to start reading</p>
+                                <p class="library-subtitle">Pull a book from the shelf to start reading</p>
                             </div>
-                            <div class="book-grid" id="bookGrid">
-                                <div class="empty-library" id="emptyLibrary">
-                                    <div class="empty-icon">📖</div>
-                                    <div class="empty-text">Your library is empty</div>
-                                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                                        + Add Your First Book
-                                    </button>
+                            <div class="bookshelf-container">
+                                <div class="bookshelf" id="bookshelf">
+                                    <!-- Shelves will be rendered here -->
                                 </div>
                             </div>
                         </div>
@@ -1407,6 +1669,8 @@
                 </aside>
             </div>
         </main>
+        <!-- Full Page Exit Button -->
+        <button class="exit-fullpage-btn" id="exitFullPageBtn" onclick="toggleFullPage()" title="Exit Full Page (Esc)">✕</button>
     </div>
 
     <!-- Settings Panel -->
@@ -1553,7 +1817,8 @@
                 layout: 'single',
                 theme: 'light'
             },
-            exportQuality: 'high'
+            exportQuality: 'high',
+            fullPageMode: false
         };
 
         // Initialize
@@ -1562,6 +1827,7 @@
             renderFileList();
             setupKeyboardNav();
             setupTouchNav();
+            setupFullPageHeaderTrigger();
             initCanvas();
         }
 
@@ -1979,7 +2245,7 @@
             const container = document.getElementById('fileList');
             container.innerHTML = state.files.map((file, i) => {
                 const progress = state.readingProgress[file.name] || 0;
-                const cover = file.metadata?.cover;
+                const cover = file.metadata?.cover || file.metadata?.fetchedCover;
                 const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
                 const author = file.metadata?.author;
                 const typeIcon = file.type === 'PDF' ? '📄' : file.type === 'EPUB' ? '📚' : '📝';
@@ -1988,7 +2254,7 @@
                     <div class="file-item ${state.currentFileIndex === i ? 'active' : ''}" onclick="selectFile(${i})">
                         <div class="file-cover">
                             ${cover
-                                ? `<img src="${cover}" alt="Cover">`
+                                ? `<img src="${cover}" alt="Cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><span style="display:none">${typeIcon}</span>`
                                 : typeIcon
                             }
                         </div>
@@ -2017,52 +2283,136 @@
         }
 
         function renderLibraryGrid() {
-            const bookGrid = document.getElementById('bookGrid');
-            const emptyLibrary = document.getElementById('emptyLibrary');
+            const bookshelf = document.getElementById('bookshelf');
 
             if (state.files.length === 0) {
-                bookGrid.innerHTML = `
-                    <div class="empty-library">
-                        <div class="empty-icon">📖</div>
-                        <div class="empty-text">Your library is empty</div>
-                        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                            + Add Your First Book
-                        </button>
+                bookshelf.innerHTML = `
+                    <div class="shelf-row">
+                        <div class="empty-library">
+                            <div class="empty-icon">📚</div>
+                            <div class="empty-text">Your bookshelf is empty</div>
+                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                + Add Your First Book
+                            </button>
+                        </div>
                     </div>
                 `;
                 return;
             }
 
-            bookGrid.innerHTML = state.files.map((file, i) => {
-                const progress = state.readingProgress[file.name] || 0;
-                const cover = file.metadata?.cover;
-                const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
-                const author = file.metadata?.author;
-                const typeIcon = file.type === 'PDF' ? '📄' : file.type === 'EPUB' ? '📚' : '📝';
+            // Group books into shelves (max 12 books per shelf)
+            const booksPerShelf = 12;
+            const shelves = [];
+            for (let i = 0; i < state.files.length; i += booksPerShelf) {
+                shelves.push(state.files.slice(i, i + booksPerShelf));
+            }
 
-                return `
-                    <div class="book-card" onclick="selectFile(${i})">
-                        <div class="book-cover-large">
-                            ${cover
-                                ? `<img src="${cover}" alt="Cover">`
-                                : typeIcon
-                            }
-                        </div>
-                        <div class="book-card-info">
-                            <div class="book-card-title">${escapeHtml(title)}</div>
-                            ${author && author !== 'Unknown' ? `<div class="book-card-author">${escapeHtml(author)}</div>` : ''}
-                            ${progress > 0 ? `
-                                <div class="book-card-progress">
-                                    <div class="book-card-progress-fill" style="width: ${progress}%"></div>
+            bookshelf.innerHTML = shelves.map((shelfBooks, shelfIndex) => `
+                <div class="shelf-row">
+                    ${shelfBooks.map((file, i) => {
+                        const fileIndex = shelfIndex * booksPerShelf + i;
+                        const progress = state.readingProgress[file.name] || 0;
+                        const cover = file.metadata?.cover || file.metadata?.fetchedCover;
+                        const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+                        const author = file.metadata?.author || '';
+
+                        return `
+                            <div class="shelf-book" onclick="selectFile(${fileIndex})" title="${escapeHtml(title)}${author ? ' - ' + escapeHtml(author) : ''}">
+                                <div class="book-pages"></div>
+                                <div class="book-spine">
+                                    <span class="book-spine-title">${escapeHtml(title)}</span>
+                                    ${author && author !== 'Unknown' ? `<span class="book-spine-author">${escapeHtml(author)}</span>` : ''}
+                                    ${progress > 0 ? `
+                                        <div class="book-progress-bar">
+                                            <div class="book-progress-fill" style="width: ${progress}%"></div>
+                                        </div>
+                                    ` : ''}
                                 </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                                <div class="book-cover-3d">
+                                    ${cover
+                                        ? `<img src="${cover}" alt="Cover" onerror="this.parentElement.innerHTML='<div class=\\'no-cover\\'><div class=\\'no-cover-title\\'>${escapeHtml(title)}</div><div class=\\'no-cover-author\\'>${escapeHtml(author)}</div></div>'">`
+                                        : `<div class="no-cover">
+                                            <div class="no-cover-title">${escapeHtml(title)}</div>
+                                            <div class="no-cover-author">${escapeHtml(author)}</div>
+                                          </div>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                    ${shelfIndex === 0 ? '<span class="shelf-decoration left">🕯️</span><span class="shelf-decoration right">🌿</span>' : ''}
+                </div>
+            `).join('');
+
+            // Try to fetch covers for books that don't have them
+            state.files.forEach((file, index) => {
+                if (!file.metadata?.cover && !file.metadata?.fetchedCover && !file.metadata?.coverFetchAttempted) {
+                    fetchBookCover(file, index);
+                }
+            });
+        }
+
+        // Fetch book cover from Open Library or Google Books API
+        async function fetchBookCover(file, fileIndex) {
+            const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+            const author = file.metadata?.author || '';
+
+            // Mark as attempted to avoid repeated fetches
+            if (!file.metadata) file.metadata = {};
+            file.metadata.coverFetchAttempted = true;
+
+            try {
+                // Try Open Library first
+                const searchQuery = encodeURIComponent(`${title} ${author}`.trim());
+                const openLibResponse = await fetch(`https://openlibrary.org/search.json?q=${searchQuery}&limit=1`);
+
+                if (openLibResponse.ok) {
+                    const data = await openLibResponse.json();
+                    if (data.docs && data.docs.length > 0) {
+                        const book = data.docs[0];
+                        if (book.cover_i) {
+                            const coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+                            file.metadata.fetchedCover = coverUrl;
+                            renderLibraryGrid();
+                            renderFileList();
+                            saveState();
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback to Google Books API
+                const googleResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${searchQuery}&maxResults=1`);
+
+                if (googleResponse.ok) {
+                    const data = await googleResponse.json();
+                    if (data.items && data.items.length > 0) {
+                        const book = data.items[0];
+                        if (book.volumeInfo?.imageLinks?.thumbnail) {
+                            // Get larger image by modifying the URL
+                            let coverUrl = book.volumeInfo.imageLinks.thumbnail;
+                            coverUrl = coverUrl.replace('zoom=1', 'zoom=2').replace('http:', 'https:');
+                            file.metadata.fetchedCover = coverUrl;
+                            renderLibraryGrid();
+                            renderFileList();
+                            saveState();
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.log('Could not fetch cover for:', title, err);
+            }
         }
 
         function showLibrary() {
+            // Exit full page mode if active
+            if (state.fullPageMode) {
+                state.fullPageMode = false;
+                document.querySelector('.app-container').classList.remove('full-page-mode');
+                document.getElementById('fullPageBtn').classList.remove('active');
+            }
+
             state.currentFileIndex = -1;
             document.getElementById('readerHeader').style.display = 'none';
             document.getElementById('libraryGrid').style.display = 'block';
@@ -2402,6 +2752,19 @@
                         e.preventDefault();
                         goToPage(state.totalPages);
                         break;
+                    case 'Escape':
+                        if (state.fullPageMode) {
+                            e.preventDefault();
+                            toggleFullPage();
+                        }
+                        break;
+                    case 'f':
+                    case 'F':
+                        if (state.currentFileIndex >= 0) {
+                            e.preventDefault();
+                            toggleFullPage();
+                        }
+                        break;
                 }
             });
         }
@@ -2518,6 +2881,67 @@
         // Notes
         function toggleNotes() {
             document.getElementById('notesPanel').classList.toggle('open');
+        }
+
+        // Full Page Mode
+        let headerTimeout = null;
+
+        function setupFullPageHeaderTrigger() {
+            document.addEventListener('mousemove', (e) => {
+                if (!state.fullPageMode) return;
+
+                const header = document.getElementById('readerHeader');
+                if (e.clientY < 60) {
+                    header.classList.add('visible');
+                    if (headerTimeout) clearTimeout(headerTimeout);
+                } else if (e.clientY > 120) {
+                    if (headerTimeout) clearTimeout(headerTimeout);
+                    headerTimeout = setTimeout(() => {
+                        header.classList.remove('visible');
+                    }, 500);
+                }
+            });
+        }
+
+        function toggleFullPage() {
+            state.fullPageMode = !state.fullPageMode;
+            const container = document.querySelector('.app-container');
+            const btn = document.getElementById('fullPageBtn');
+
+            if (state.fullPageMode) {
+                container.classList.add('full-page-mode');
+                btn.classList.add('active');
+                btn.title = 'Exit Full Page (Esc)';
+                showToast('Full page mode - Press F or Esc to exit', 'success');
+
+                // Re-render content to adjust to new size
+                setTimeout(() => {
+                    if (state.currentFileIndex >= 0) {
+                        const file = state.files[state.currentFileIndex];
+                        if (file.type === 'PDF') {
+                            renderPdfPage(state.currentPage);
+                        } else if (state.pages && state.pages.length > 0) {
+                            renderTextPage(state.currentPage);
+                        }
+                    }
+                }, 300);
+            } else {
+                container.classList.remove('full-page-mode');
+                btn.classList.remove('active');
+                btn.title = 'Full Page View';
+
+                // Re-render content to adjust to new size
+                setTimeout(() => {
+                    if (state.currentFileIndex >= 0) {
+                        const file = state.files[state.currentFileIndex];
+                        if (file.type === 'PDF') {
+                            renderPdfPage(state.currentPage);
+                        } else if (state.pages && state.pages.length > 0) {
+                            renderTextPage(state.currentPage);
+                        }
+                    }
+                }, 300);
+            }
         }
 
         function switchNoteTab(tab) {
