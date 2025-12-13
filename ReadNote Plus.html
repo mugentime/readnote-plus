@@ -1896,7 +1896,9 @@
                     showToast(`Extracted ${pdfExtract.chapters.length} sections from PDF`, 'success');
                 } else if (file.name.endsWith('.epub')) {
                     fileData.rawData = await readAsArrayBuffer(file);
-                    const epub = await parseEpub(fileData.rawData);
+                    // Create a copy for parsing (JSZip consumes the buffer)
+                    const bufferForParsing = fileData.rawData.slice(0);
+                    const epub = await parseEpub(bufferForParsing);
                     fileData.content = epub.content;
                     fileData.chapters = epub.chapters;
                     fileData.metadata = epub.metadata;
@@ -2451,7 +2453,9 @@
             });
 
             if (file.type === 'PDF') {
-                await renderPdf(file.rawData);
+                // Create a copy of the buffer (PDF.js may consume it)
+                const bufferCopy = file.rawData.slice(0);
+                await renderPdf(bufferCopy);
             } else {
                 await renderBook(file);
             }
@@ -3448,7 +3452,7 @@ img { max-width: 100%; page-break-inside: avoid; }`
                     name: `${title}.epub`,
                     type: 'EPUB',
                     size: blob.size,
-                    rawData: arrayBuffer,
+                    rawData: arrayBuffer.slice(0), // Keep a copy for later use
                     content: null,
                     chapters: chapters,
                     metadata: {
@@ -3459,9 +3463,10 @@ img { max-width: 100%; page-break-inside: avoid; }`
                     }
                 };
 
-                // Parse the exported EPUB to get full content
+                // Parse the exported EPUB to get full content (use a copy)
                 try {
-                    const parsedEpub = await parseEpub(arrayBuffer);
+                    const bufferForParsing = arrayBuffer.slice(0);
+                    const parsedEpub = await parseEpub(bufferForParsing);
                     exportedFile.content = parsedEpub.content;
                     exportedFile.chapters = parsedEpub.chapters;
                     // Keep the original cover if the new one wasn't found
