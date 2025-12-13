@@ -6,7 +6,19 @@
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["ereader", "pdf", "epub", "notes", "stylus"],
+  "keywords": [
+    "ereader",
+    "pdf",
+    "epub",
+    "notes",
+    "stylus"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.32.1"
+  }
 }

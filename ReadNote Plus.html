@@ -89,6 +89,34 @@
             font-size: 12px;
             color: var(--color-amber);
             opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cloud-indicator {
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .cloud-indicator.connected {
+            color: #4CAF50;
+            text-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+        }
+
+        .cloud-indicator.disconnected {
+            color: #888;
+            opacity: 0.6;
+        }
+
+        .cloud-indicator.syncing {
+            color: #FFC107;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .upload-btn {
@@ -400,6 +428,10 @@
             position: relative;
         }
 
+        .page-container.showing-library {
+            padding: 0;
+        }
+
         .page-view {
             width: 100%;
             max-width: 800px;
@@ -537,11 +569,18 @@
 
         /* Realistic Bookshelf Library */
         .library-grid {
+            display: block;
             width: 100%;
             height: 100%;
+            min-height: 100%;
             overflow-y: auto;
             background: linear-gradient(180deg, #2C1810 0%, #1A0F0A 100%);
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
         }
 
         .library-grid::before {
@@ -1565,7 +1604,10 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="app-title">📚 ReadNote Plus</div>
-                <div class="app-subtitle">E-Reader & Note-Taking</div>
+                <div class="app-subtitle">
+                    E-Reader & Note-Taking
+                    <span id="cloudIndicator" class="cloud-indicator disconnected" title="Cloud status">☁</span>
+                </div>
                 <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
                     + Add Book
                 </button>
@@ -1606,7 +1648,7 @@
             <!-- Reading Area -->
             <div class="reading-area">
                 <div class="reader-panel" id="readerPanel">
-                    <div class="page-container" id="pageContainer">
+                    <div class="page-container showing-library" id="pageContainer">
                         <!-- Bookshelf Library View -->
                         <div class="library-grid" id="libraryGrid">
                             <div class="library-header">
@@ -1818,17 +1860,271 @@
                 theme: 'light'
             },
             exportQuality: 'high',
-            fullPageMode: false
+            fullPageMode: false,
+            cloudConnected: false
         };
 
+        // Cloud Sync API Functions
+        const cloudApi = {
+            async checkStatus() {
+                try {
+                    const response = await fetch('/api/status');
+                    if (response.ok) {
+                        const data = await response.json();
+                        state.cloudConnected = data.redis === 'connected';
+                        return state.cloudConnected;
+                    }
+                } catch (e) {
+                    console.log('Cloud not available');
+                }
+                state.cloudConnected = false;
+                return false;
+            },
+
+            async loadBooks() {
+                if (!state.cloudConnected) return [];
+                try {
+                    const response = await fetch('/api/books');
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.books || [];
+                    }
+                } catch (e) {
+                    console.error('Failed to load books from cloud:', e);
+                }
+                return [];
+            },
+
+            async loadBook(bookId) {
+                if (!state.cloudConnected) return null;
+                try {
+                    const response = await fetch(`/api/books/${encodeURIComponent(bookId)}`);
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.error('Failed to load book from cloud:', e);
+                }
+                return null;
+            },
+
+            async saveBook(file) {
+                if (!state.cloudConnected) return false;
+                try {
+                    // Convert ArrayBuffer to Base64 for storage
+                    let rawDataBase64 = null;
+                    if (file.rawData) {
+                        const bytes = new Uint8Array(file.rawData);
+                        let binary = '';
+                        for (let i = 0; i < bytes.length; i++) {
+                            binary += String.fromCharCode(bytes[i]);
+                        }
+                        rawDataBase64 = btoa(binary);
+                    }
+
+                    const response = await fetch('/api/books', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: file.name,
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            metadata: file.metadata,
+                            rawData: rawDataBase64,
+                            content: file.content,
+                            chapters: file.chapters
+                        })
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error('Failed to save book to cloud:', e);
+                }
+                return false;
+            },
+
+            async deleteBook(bookId) {
+                if (!state.cloudConnected) return false;
+                try {
+                    const response = await fetch(`/api/books/${encodeURIComponent(bookId)}`, {
+                        method: 'DELETE'
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error('Failed to delete book from cloud:', e);
+                }
+                return false;
+            },
+
+            async loadProgress() {
+                if (!state.cloudConnected) return null;
+                try {
+                    const response = await fetch('/api/progress');
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.progress || {};
+                    }
+                } catch (e) {
+                    console.error('Failed to load progress from cloud:', e);
+                }
+                return null;
+            },
+
+            async saveProgress(progress) {
+                if (!state.cloudConnected) return false;
+                try {
+                    const response = await fetch('/api/progress', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ progress })
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error('Failed to save progress to cloud:', e);
+                }
+                return false;
+            },
+
+            async loadNotes() {
+                if (!state.cloudConnected) return null;
+                try {
+                    const response = await fetch('/api/notes');
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.notes || {};
+                    }
+                } catch (e) {
+                    console.error('Failed to load notes from cloud:', e);
+                }
+                return null;
+            },
+
+            async saveNotes(notes) {
+                if (!state.cloudConnected) return false;
+                try {
+                    const response = await fetch('/api/notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ notes })
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error('Failed to save notes to cloud:', e);
+                }
+                return false;
+            }
+        };
+
+        function updateCloudIndicator() {
+            const indicator = document.getElementById('cloudIndicator');
+            if (indicator) {
+                indicator.className = 'cloud-indicator ' + (state.cloudConnected ? 'connected' : 'disconnected');
+                indicator.title = state.cloudConnected ? 'Cloud connected - syncing' : 'Cloud disconnected - local only';
+            }
+        }
+
         // Initialize
-        function init() {
+        async function init() {
             loadState();
+
+            // Add demo books if URL has ?demo parameter
+            if (window.location.search.includes('demo') && state.files.length === 0) {
+                addDemoBooks();
+            }
+
             renderFileList();
             setupKeyboardNav();
             setupTouchNav();
             setupFullPageHeaderTrigger();
             initCanvas();
+
+            // Check cloud connection and load books from Redis
+            await initCloudSync();
+        }
+
+        function addDemoBooks() {
+            const demoBooks = [
+                { name: 'The Great Gatsby.epub', type: 'EPUB', size: 1024000, metadata: { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald' }, content: 'Demo content...', chapters: [{ title: 'Chapter 1', content: 'In my younger and more vulnerable years...' }] },
+                { name: 'Pride and Prejudice.epub', type: 'EPUB', size: 2048000, metadata: { title: 'Pride and Prejudice', author: 'Jane Austen' }, content: 'Demo content...', chapters: [{ title: 'Chapter 1', content: 'It is a truth universally acknowledged...' }] },
+                { name: '1984.pdf', type: 'PDF', size: 3072000, metadata: { title: '1984', author: 'George Orwell' }, content: 'Demo content...', chapters: [{ title: 'Part One', content: 'It was a bright cold day in April...' }] },
+                { name: 'To Kill a Mockingbird.epub', type: 'EPUB', size: 1536000, metadata: { title: 'To Kill a Mockingbird', author: 'Harper Lee' }, content: 'Demo content...', chapters: [{ title: 'Chapter 1', content: 'When he was nearly thirteen...' }] },
+                { name: 'The Catcher in the Rye.pdf', type: 'PDF', size: 2560000, metadata: { title: 'The Catcher in the Rye', author: 'J.D. Salinger' }, content: 'Demo content...', chapters: [{ title: 'Chapter 1', content: 'If you really want to hear about it...' }] },
+                { name: 'Moby Dick.epub', type: 'EPUB', size: 3584000, metadata: { title: 'Moby Dick', author: 'Herman Melville' }, content: 'Demo content...', chapters: [{ title: 'Chapter 1', content: 'Call me Ishmael...' }] },
+            ];
+            state.files = demoBooks;
+            demoBooks.forEach(book => {
+                if (!state.notes[book.name]) state.notes[book.name] = [];
+            });
+            console.log('Added demo books:', demoBooks.length);
+        }
+
+        async function initCloudSync() {
+            const connected = await cloudApi.checkStatus();
+            updateCloudIndicator();
+
+            if (connected) {
+                showToast('Cloud connected - syncing books...', 'success');
+
+                // Load cloud progress and notes (merge with local)
+                const cloudProgress = await cloudApi.loadProgress();
+                const cloudNotes = await cloudApi.loadNotes();
+
+                if (cloudProgress) {
+                    state.readingProgress = { ...state.readingProgress, ...cloudProgress };
+                }
+                if (cloudNotes) {
+                    state.notes = { ...state.notes, ...cloudNotes };
+                }
+
+                // Load book list from cloud
+                const cloudBooks = await cloudApi.loadBooks();
+                const localBookNames = state.files.map(f => f.name);
+
+                // Add cloud books that aren't loaded locally
+                for (const cloudBook of cloudBooks) {
+                    if (!localBookNames.includes(cloudBook.name)) {
+                        // Load full book data from cloud
+                        const fullBook = await cloudApi.loadBook(cloudBook.id);
+                        if (fullBook) {
+                            const fileData = {
+                                name: fullBook.name,
+                                type: fullBook.type,
+                                size: fullBook.size,
+                                metadata: fullBook.metadata,
+                                content: null,
+                                chapters: []
+                            };
+
+                            // Convert Base64 back to ArrayBuffer
+                            if (fullBook.rawData) {
+                                const binary = atob(fullBook.rawData);
+                                const bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) {
+                                    bytes[i] = binary.charCodeAt(i);
+                                }
+                                fileData.rawData = bytes.buffer;
+                            }
+
+                            // Restore content/chapters
+                            if (fullBook.content) {
+                                fileData.content = fullBook.content;
+                            }
+                            if (fullBook.chapters) {
+                                fileData.chapters = fullBook.chapters;
+                            }
+
+                            state.files.push(fileData);
+                            if (!state.notes[fullBook.name]) state.notes[fullBook.name] = [];
+                        }
+                    }
+                }
+
+                renderFileList();
+                saveState();
+                showToast(`Synced ${cloudBooks.length} books from cloud`, 'success');
+            } else {
+                console.log('Running in offline mode');
+            }
         }
 
         function loadState() {
@@ -1842,8 +2138,54 @@
                     state.settings = { ...state.settings, ...data.settings };
                     applySettings();
                 }
+
+                // Load books from localStorage
+                loadBooks();
             } catch (e) {
                 console.error('Failed to load state:', e);
+            }
+        }
+
+        // Helper functions for ArrayBuffer <-> Base64 conversion
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function loadBooks() {
+            try {
+                const savedBooks = localStorage.getItem('readNotePlusBooks');
+                console.log('Loading books from localStorage:', savedBooks ? 'found' : 'not found');
+                if (savedBooks) {
+                    const books = JSON.parse(savedBooks);
+                    state.files = books.map(book => ({
+                        name: book.name,
+                        type: book.type,
+                        size: book.size,
+                        metadata: book.metadata,
+                        content: book.content,
+                        chapters: book.chapters,
+                        styles: book.styles,
+                        // Convert Base64 back to ArrayBuffer
+                        rawData: book.rawData ? base64ToArrayBuffer(book.rawData) : null
+                    }));
+                    console.log(`Loaded ${state.files.length} books from localStorage`);
+                }
+            } catch (e) {
+                console.error('Failed to load books:', e);
             }
         }
 
@@ -1855,9 +2197,68 @@
                     readingProgress: state.readingProgress,
                     settings: state.settings
                 }));
+
+                // Save books to localStorage as well (for offline persistence)
+                saveBooks();
+
+                // Also sync to cloud (debounced)
+                syncToCloud();
             } catch (e) {
                 console.error('Failed to save state:', e);
             }
+        }
+
+        // Save books to localStorage
+        function saveBooks() {
+            console.log('Saving books to localStorage, count:', state.files.length);
+            try {
+                // Save book data with rawData converted to Base64
+                const booksToSave = state.files.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    metadata: file.metadata,
+                    content: file.content,
+                    chapters: file.chapters,
+                    styles: file.styles,
+                    // Convert ArrayBuffer to Base64 for localStorage
+                    rawData: file.rawData ? arrayBufferToBase64(file.rawData) : null
+                }));
+                const jsonStr = JSON.stringify(booksToSave);
+                console.log('Books JSON size:', jsonStr.length, 'bytes');
+                localStorage.setItem('readNotePlusBooks', jsonStr);
+                console.log('Books saved successfully');
+            } catch (e) {
+                console.error('Failed to save books:', e);
+                // If localStorage is full, try saving without raw data
+                try {
+                    console.log('Trying to save without raw data...');
+                    const booksMetaOnly = state.files.map(file => ({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        metadata: file.metadata,
+                        content: file.content,
+                        chapters: file.chapters
+                    }));
+                    localStorage.setItem('readNotePlusBooks', JSON.stringify(booksMetaOnly));
+                    console.log('Books saved without raw data');
+                } catch (e2) {
+                    console.error('Failed to save even book metadata:', e2);
+                }
+            }
+        }
+
+        // Debounced cloud sync for progress/notes
+        let cloudSyncTimeout = null;
+        function syncToCloud() {
+            if (cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+            cloudSyncTimeout = setTimeout(async () => {
+                if (state.cloudConnected) {
+                    await cloudApi.saveProgress(state.readingProgress);
+                    await cloudApi.saveNotes(state.notes);
+                }
+            }, 2000); // Wait 2 seconds before syncing to avoid too many requests
         }
 
         // File handling
@@ -1912,6 +2313,18 @@
                 renderFileList();
                 selectFile(state.files.length - 1);
                 showToast('Loaded: ' + file.name, 'success');
+
+                // Save to localStorage (and cloud if connected)
+                saveState();
+
+                // Save to cloud if connected
+                if (state.cloudConnected) {
+                    showToast('Saving to cloud...', 'info');
+                    const saved = await cloudApi.saveBook(fileData);
+                    if (saved) {
+                        showToast('Book saved to cloud', 'success');
+                    }
+                }
             } catch (err) {
                 console.error('Error loading file:', err);
                 showToast('Failed to load: ' + err.message, 'error');
@@ -2419,6 +2832,7 @@
             document.getElementById('readerHeader').style.display = 'none';
             document.getElementById('libraryGrid').style.display = 'block';
             document.getElementById('pageView').style.display = 'none';
+            document.getElementById('pageContainer').classList.add('showing-library');
             renderFileList();
         }
 
@@ -2430,6 +2844,7 @@
             document.getElementById('readerHeader').style.display = 'flex';
             document.getElementById('libraryGrid').style.display = 'none';
             document.getElementById('pageView').style.display = 'flex';
+            document.getElementById('pageContainer').classList.remove('showing-library');
 
             document.getElementById('bookTitle').textContent = file.metadata?.title || file.name;
             document.getElementById('bookAuthor').textContent = file.metadata?.author || '';
@@ -3530,7 +3945,8 @@ img { max-width: 100%; page-break-inside: avoid; }`
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
 
-        function deleteFile(index) {
+        async function deleteFile(index) {
+            const file = state.files[index];
             state.files.splice(index, 1);
             if (state.currentFileIndex === index) {
                 showLibrary();
@@ -3538,6 +3954,14 @@ img { max-width: 100%; page-break-inside: avoid; }`
                 state.currentFileIndex--;
             }
             renderFileList();
+
+            // Save to localStorage
+            saveState();
+
+            // Delete from cloud if connected
+            if (state.cloudConnected && file) {
+                await cloudApi.deleteBook(file.name);
+            }
         }
 
         function showToast(message, type = 'info') {
