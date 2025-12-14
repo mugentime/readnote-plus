@@ -2171,6 +2171,10 @@
                 console.log('Loading books from localStorage:', savedBooks ? 'found' : 'not found');
                 if (savedBooks) {
                     const books = JSON.parse(savedBooks);
+                    console.log('Parsed books array length:', books.length);
+                    if (books.length > 0) {
+                        console.log('First book:', books[0].name, books[0].type);
+                    }
                     state.files = books.map(book => ({
                         name: book.name,
                         type: book.type,
