@@ -633,6 +633,23 @@
             position: relative;
         }
 
+        .shelf-section {
+            margin-bottom: 30px;
+        }
+
+        .shelf-label {
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-cream);
+            padding: 10px 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.9;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 10px;
+        }
+
         .shelf-row {
             display: flex;
             align-items: flex-end;
@@ -2705,7 +2722,8 @@
             // Render sidebar file list
             const container = document.getElementById('fileList');
             container.innerHTML = state.files.map((file, i) => {
-                const progress = state.readingProgress[file.name] || 0;
+                const progressData = state.readingProgress[file.name];
+                const progress = progressData ? (typeof progressData === 'object' ? progressData.percent : progressData) : 0;
                 const cover = file.metadata?.cover || file.metadata?.fetchedCover;
                 const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
                 const author = file.metadata?.author;
@@ -2748,62 +2766,84 @@
 
             if (state.files.length === 0) {
                 bookshelf.innerHTML = `
-                    <div class="shelf-row">
-                        <div class="empty-library">
-                            <div class="empty-icon">📚</div>
-                            <div class="empty-text">Your bookshelf is empty</div>
-                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                                + Add Your First Book
-                            </button>
+                    <div class="shelf-section">
+                        <div class="shelf-row">
+                            <div class="empty-library">
+                                <div class="empty-icon">📚</div>
+                                <div class="empty-text">Your bookshelf is empty</div>
+                                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                    + Add Your First Book
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
                 return;
             }
 
-            // Group books into shelves (max 12 books per shelf)
-            const booksPerShelf = 12;
-            const shelves = [];
-            for (let i = 0; i < state.files.length; i += booksPerShelf) {
-                shelves.push(state.files.slice(i, i + booksPerShelf));
-            }
+            // Separate books by type
+            const epubs = state.files.filter(f => f.type === 'EPUB');
+            const pdfs = state.files.filter(f => f.type === 'PDF');
+            const others = state.files.filter(f => f.type !== 'EPUB' && f.type !== 'PDF');
 
-            bookshelf.innerHTML = shelves.map((shelfBooks, shelfIndex) => `
-                <div class="shelf-row">
-                    ${shelfBooks.map((file, i) => {
-                        const fileIndex = shelfIndex * booksPerShelf + i;
-                        const progress = state.readingProgress[file.name] || 0;
-                        const cover = file.metadata?.cover || file.metadata?.fetchedCover;
-                        const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
-                        const author = file.metadata?.author || '';
+            // Helper to render a shelf section
+            const renderShelfSection = (books, label, icon, decoration) => {
+                if (books.length === 0) return '';
 
-                        return `
-                            <div class="shelf-book" onclick="selectFile(${fileIndex})" title="${escapeHtml(title)}${author ? ' - ' + escapeHtml(author) : ''}">
-                                <div class="book-pages"></div>
-                                <div class="book-spine">
-                                    <span class="book-spine-title">${escapeHtml(title)}</span>
-                                    ${author && author !== 'Unknown' ? `<span class="book-spine-author">${escapeHtml(author)}</span>` : ''}
-                                    ${progress > 0 ? `
-                                        <div class="book-progress-bar">
-                                            <div class="book-progress-fill" style="width: ${progress}%"></div>
+                const booksPerShelf = 8;
+                const shelves = [];
+                for (let i = 0; i < books.length; i += booksPerShelf) {
+                    shelves.push(books.slice(i, i + booksPerShelf));
+                }
+
+                return `
+                    <div class="shelf-section">
+                        <div class="shelf-label">${icon} ${label}</div>
+                        ${shelves.map((shelfBooks, shelfIndex) => `
+                            <div class="shelf-row">
+                                ${shelfBooks.map((file) => {
+                                    const fileIndex = state.files.indexOf(file);
+                                    const progressData = state.readingProgress[file.name];
+                                    const progress = progressData ? (typeof progressData === 'object' ? progressData.percent : progressData) : 0;
+                                    const cover = file.metadata?.cover || file.metadata?.fetchedCover;
+                                    const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+                                    const author = file.metadata?.author || '';
+
+                                    return \`
+                                        <div class="shelf-book" onclick="selectFile(\${fileIndex})" title="\${escapeHtml(title)}\${author ? ' - ' + escapeHtml(author) : ''}">
+                                            <div class="book-pages"></div>
+                                            <div class="book-spine">
+                                                <span class="book-spine-title">\${escapeHtml(title)}</span>
+                                                \${author && author !== 'Unknown' ? \`<span class="book-spine-author">\${escapeHtml(author)}</span>\` : ''}
+                                                \${progress > 0 ? \`
+                                                    <div class="book-progress-bar">
+                                                        <div class="book-progress-fill" style="width: \${progress}%"></div>
+                                                    </div>
+                                                \` : ''}
+                                            </div>
+                                            <div class="book-cover-3d">
+                                                \${cover
+                                                    ? \`<img src="\${cover}" alt="Cover" onerror="this.parentElement.innerHTML='<div class=\\\\'no-cover\\\\'><div class=\\\\'no-cover-title\\\\'>\${escapeHtml(title)}</div><div class=\\\\'no-cover-author\\\\'>\${escapeHtml(author)}</div></div>'">\`
+                                                    : \`<div class="no-cover">
+                                                        <div class="no-cover-title">\${escapeHtml(title)}</div>
+                                                        <div class="no-cover-author">\${escapeHtml(author)}</div>
+                                                      </div>\`
+                                                }
+                                            </div>
                                         </div>
-                                    ` : ''}
-                                </div>
-                                <div class="book-cover-3d">
-                                    ${cover
-                                        ? `<img src="${cover}" alt="Cover" onerror="this.parentElement.innerHTML='<div class=\\'no-cover\\'><div class=\\'no-cover-title\\'>${escapeHtml(title)}</div><div class=\\'no-cover-author\\'>${escapeHtml(author)}</div></div>'">`
-                                        : `<div class="no-cover">
-                                            <div class="no-cover-title">${escapeHtml(title)}</div>
-                                            <div class="no-cover-author">${escapeHtml(author)}</div>
-                                          </div>`
-                                    }
-                                </div>
+                                    \`;
+                                }).join('')}
+                                ${shelfIndex === 0 && decoration ? decoration : ''}
                             </div>
-                        `;
-                    }).join('')}
-                    ${shelfIndex === 0 ? '<span class="shelf-decoration left">🕯️</span><span class="shelf-decoration right">🌿</span>' : ''}
-                </div>
-            `).join('');
+                        `).join('')}
+                    </div>
+                `;
+            };
+
+            bookshelf.innerHTML =
+                renderShelfSection(epubs, 'E-Books', '📚', '<span class="shelf-decoration left">🕯️</span><span class="shelf-decoration right">🌿</span>') +
+                renderShelfSection(pdfs, 'Documents', '📄', '<span class="shelf-decoration left">📖</span><span class="shelf-decoration right">🪴</span>') +
+                renderShelfSection(others, 'Other', '📝', '');
 
             // Try to fetch covers for books that don't have them
             state.files.forEach((file, index) => {
@@ -2924,8 +2964,17 @@
             // Restore reading position
             const savedProgress = state.readingProgress[file.name];
             if (savedProgress) {
-                const targetPage = Math.floor((savedProgress / 100) * state.totalPages);
-                if (targetPage > 1) goToPage(targetPage);
+                let targetPage = 1;
+                // Support both old format (percentage) and new format (object with page)
+                if (typeof savedProgress === 'object' && savedProgress.page) {
+                    targetPage = savedProgress.page;
+                } else if (typeof savedProgress === 'number') {
+                    targetPage = Math.floor((savedProgress / 100) * state.totalPages);
+                }
+                if (targetPage > 1 && targetPage <= state.totalPages) {
+                    goToPage(targetPage);
+                    showToast(`Resumed at page ${targetPage}`, 'info');
+                }
             }
 
             renderNotes();
@@ -3159,7 +3208,12 @@
             if (state.currentFileIndex >= 0) {
                 const file = state.files[state.currentFileIndex];
                 const progress = (state.currentPage / state.totalPages) * 100;
-                state.readingProgress[file.name] = progress;
+                // Store both page number and percentage for accurate restoration
+                state.readingProgress[file.name] = {
+                    page: state.currentPage,
+                    total: state.totalPages,
+                    percent: progress
+                };
                 saveState();
             }
         }
