@@ -2211,41 +2211,76 @@
         // Save books to localStorage
         function saveBooks() {
             console.log('Saving books to localStorage, count:', state.files.length);
+            if (state.files.length === 0) {
+                localStorage.setItem('readNotePlusBooks', '[]');
+                return;
+            }
+
+            // First try: save with rawData for small files only (< 2MB each)
             try {
-                // Save book data with rawData converted to Base64
-                const booksToSave = state.files.map(file => ({
+                const booksToSave = state.files.map(file => {
+                    const includeRawData = file.rawData && file.rawData.byteLength < 2 * 1024 * 1024;
+                    return {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        metadata: file.metadata,
+                        content: file.content,
+                        chapters: file.chapters,
+                        styles: file.styles,
+                        rawData: includeRawData ? arrayBufferToBase64(file.rawData) : null
+                    };
+                });
+                const jsonStr = JSON.stringify(booksToSave);
+                console.log('Books JSON size:', (jsonStr.length / 1024 / 1024).toFixed(2), 'MB');
+                localStorage.setItem('readNotePlusBooks', jsonStr);
+                console.log('Books saved successfully with content');
+                return;
+            } catch (e) {
+                console.warn('Failed to save with content, trying metadata only:', e.message);
+            }
+
+            // Second try: save without rawData but keep content/chapters
+            try {
+                const booksWithContent = state.files.map(file => ({
                     name: file.name,
                     type: file.type,
                     size: file.size,
                     metadata: file.metadata,
                     content: file.content,
                     chapters: file.chapters,
-                    styles: file.styles,
-                    // Convert ArrayBuffer to Base64 for localStorage
-                    rawData: file.rawData ? arrayBufferToBase64(file.rawData) : null
+                    styles: file.styles
                 }));
-                const jsonStr = JSON.stringify(booksToSave);
-                console.log('Books JSON size:', jsonStr.length, 'bytes');
+                const jsonStr = JSON.stringify(booksWithContent);
+                console.log('Books JSON size (no rawData):', (jsonStr.length / 1024 / 1024).toFixed(2), 'MB');
                 localStorage.setItem('readNotePlusBooks', jsonStr);
-                console.log('Books saved successfully');
+                console.log('Books saved without rawData');
+                return;
+            } catch (e) {
+                console.warn('Failed to save with content, trying minimal:', e.message);
+            }
+
+            // Third try: save only essential metadata (chapters truncated)
+            try {
+                const booksMinimal = state.files.map(file => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    metadata: file.metadata,
+                    // Only save first 50KB of content per book
+                    content: file.content ? file.content.substring(0, 50000) : null,
+                    chapters: file.chapters ? file.chapters.map(ch => ({
+                        title: ch.title,
+                        content: ch.content ? ch.content.substring(0, 10000) : ''
+                    })) : []
+                }));
+                localStorage.setItem('readNotePlusBooks', JSON.stringify(booksMinimal));
+                console.log('Books saved with truncated content');
+                showToast('Book saved (content truncated due to size)', 'info');
+                return;
             } catch (e) {
                 console.error('Failed to save books:', e);
-                // If localStorage is full, try saving without raw data
-                try {
-                    console.log('Trying to save without raw data...');
-                    const booksMetaOnly = state.files.map(file => ({
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        metadata: file.metadata,
-                        content: file.content,
-                        chapters: file.chapters
-                    }));
-                    localStorage.setItem('readNotePlusBooks', JSON.stringify(booksMetaOnly));
-                    console.log('Books saved without raw data');
-                } catch (e2) {
-                    console.error('Failed to save even book metadata:', e2);
-                }
+                showToast('Could not save book locally - file too large', 'error');
             }
         }
 
