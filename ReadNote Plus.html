@@ -2215,7 +2215,14 @@
         // Save books to localStorage
         function saveBooks() {
             console.log('Saving books to localStorage, count:', state.files.length);
+
+            // Don't overwrite existing books with empty array during init
             if (state.files.length === 0) {
+                const existing = localStorage.getItem('readNotePlusBooks');
+                if (existing && existing !== '[]') {
+                    console.log('Skipping save - not overwriting existing books with empty array');
+                    return;
+                }
                 localStorage.setItem('readNotePlusBooks', '[]');
                 return;
             }
