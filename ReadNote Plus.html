@@ -2786,6 +2786,45 @@
             const pdfs = state.files.filter(f => f.type === 'PDF');
             const others = state.files.filter(f => f.type !== 'EPUB' && f.type !== 'PDF');
 
+            // Helper to render a single book
+            const renderBook = (file) => {
+                const fileIndex = state.files.indexOf(file);
+                const progressData = state.readingProgress[file.name];
+                const progress = progressData ? (typeof progressData === 'object' ? progressData.percent : progressData) : 0;
+                const cover = file.metadata?.cover || file.metadata?.fetchedCover;
+                const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+                const author = file.metadata?.author || '';
+                const titleAttr = escapeHtml(title) + (author ? ' - ' + escapeHtml(author) : '');
+
+                let coverHtml = '';
+                if (cover) {
+                    coverHtml = '<img src="' + cover + '" alt="Cover" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\'">' +
+                        '<div class="no-cover" style="display:none"><div class="no-cover-title">' + escapeHtml(title) + '</div><div class="no-cover-author">' + escapeHtml(author) + '</div></div>';
+                } else {
+                    coverHtml = '<div class="no-cover"><div class="no-cover-title">' + escapeHtml(title) + '</div><div class="no-cover-author">' + escapeHtml(author) + '</div></div>';
+                }
+
+                let progressHtml = '';
+                if (progress > 0) {
+                    progressHtml = '<div class="book-progress-bar"><div class="book-progress-fill" style="width: ' + progress + '%"></div></div>';
+                }
+
+                let authorHtml = '';
+                if (author && author !== 'Unknown') {
+                    authorHtml = '<span class="book-spine-author">' + escapeHtml(author) + '</span>';
+                }
+
+                return '<div class="shelf-book" onclick="selectFile(' + fileIndex + ')" title="' + titleAttr + '">' +
+                    '<div class="book-pages"></div>' +
+                    '<div class="book-spine">' +
+                        '<span class="book-spine-title">' + escapeHtml(title) + '</span>' +
+                        authorHtml +
+                        progressHtml +
+                    '</div>' +
+                    '<div class="book-cover-3d">' + coverHtml + '</div>' +
+                '</div>';
+            };
+
             // Helper to render a shelf section
             const renderShelfSection = (books, label, icon, decoration) => {
                 if (books.length === 0) return '';
@@ -2796,48 +2835,22 @@
                     shelves.push(books.slice(i, i + booksPerShelf));
                 }
 
-                return `
-                    <div class="shelf-section">
-                        <div class="shelf-label">${icon} ${label}</div>
-                        ${shelves.map((shelfBooks, shelfIndex) => `
-                            <div class="shelf-row">
-                                ${shelfBooks.map((file) => {
-                                    const fileIndex = state.files.indexOf(file);
-                                    const progressData = state.readingProgress[file.name];
-                                    const progress = progressData ? (typeof progressData === 'object' ? progressData.percent : progressData) : 0;
-                                    const cover = file.metadata?.cover || file.metadata?.fetchedCover;
-                                    const title = file.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
-                                    const author = file.metadata?.author || '';
+                let html = '<div class="shelf-section">';
+                html += '<div class="shelf-label">' + icon + ' ' + label + '</div>';
 
-                                    return \`
-                                        <div class="shelf-book" onclick="selectFile(\${fileIndex})" title="\${escapeHtml(title)}\${author ? ' - ' + escapeHtml(author) : ''}">
-                                            <div class="book-pages"></div>
-                                            <div class="book-spine">
-                                                <span class="book-spine-title">\${escapeHtml(title)}</span>
-                                                \${author && author !== 'Unknown' ? \`<span class="book-spine-author">\${escapeHtml(author)}</span>\` : ''}
-                                                \${progress > 0 ? \`
-                                                    <div class="book-progress-bar">
-                                                        <div class="book-progress-fill" style="width: \${progress}%"></div>
-                                                    </div>
-                                                \` : ''}
-                                            </div>
-                                            <div class="book-cover-3d">
-                                                \${cover
-                                                    ? \`<img src="\${cover}" alt="Cover" onerror="this.parentElement.innerHTML='<div class=\\\\'no-cover\\\\'><div class=\\\\'no-cover-title\\\\'>\${escapeHtml(title)}</div><div class=\\\\'no-cover-author\\\\'>\${escapeHtml(author)}</div></div>'">\`
-                                                    : \`<div class="no-cover">
-                                                        <div class="no-cover-title">\${escapeHtml(title)}</div>
-                                                        <div class="no-cover-author">\${escapeHtml(author)}</div>
-                                                      </div>\`
-                                                }
-                                            </div>
-                                        </div>
-                                    \`;
-                                }).join('')}
-                                ${shelfIndex === 0 && decoration ? decoration : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                shelves.forEach((shelfBooks, shelfIndex) => {
+                    html += '<div class="shelf-row">';
+                    shelfBooks.forEach(file => {
+                        html += renderBook(file);
+                    });
+                    if (shelfIndex === 0 && decoration) {
+                        html += decoration;
+                    }
+                    html += '</div>';
+                });
+
+                html += '</div>';
+                return html;
             };
 
             bookshelf.innerHTML =
